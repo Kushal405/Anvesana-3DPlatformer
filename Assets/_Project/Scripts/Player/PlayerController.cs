@@ -2,9 +2,15 @@ using KBCore.Refs;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections;  // Added for IEnumerator
 
 public class PlayerController : ValidatedMonoBehaviour
 {
+    [Header("Health")]
+    public int maxHealth = 3;
+    int currentHealth;
+    public UnityEngine.UI.Slider healthSlider;
+
     [Header("References")]
     [SerializeField, Self] Rigidbody rb;
     [SerializeField, Self] Animator animator;
@@ -21,19 +27,36 @@ public class PlayerController : ValidatedMonoBehaviour
     Vector3 moveDir;
 
     void Awake()
-    {
-        mainCam = Camera.main.transform;
-        rb.freezeRotation = true;
-        rb.interpolation = RigidbodyInterpolation.Interpolate;
-        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+{
+    mainCam = Camera.main.transform;
+    rb.freezeRotation = true;
+    rb.interpolation = RigidbodyInterpolation.Interpolate;
+    rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
 
-        var go = new GameObject("CameraTarget");
-        var t = go.transform;
-        t.SetParent(transform);
-        t.localPosition = new Vector3(0f, 1.5f, 0f);
-        cinemachineFreeLook.Target.TrackingTarget = t;
-        cinemachineFreeLook.Target.CustomLookAtTarget = false;
+    var go = new GameObject("CameraTarget");
+    var t = go.transform;
+    t.SetParent(transform);
+    t.localPosition = new Vector3(0f, 1.5f, 0f);
+    cinemachineFreeLook.Target.TrackingTarget = t;
+    cinemachineFreeLook.Target.CustomLookAtTarget = false;
+}
+
+void Start()
+{
+    currentHealth = maxHealth;
+    
+    if (healthSlider != null)
+    {
+        healthSlider.minValue = 0;
+        healthSlider.maxValue = maxHealth;
+        healthSlider.value = currentHealth;
+        Debug.Log($"✓ Health slider found and initialized: {currentHealth}/{maxHealth}");
     }
+    else
+    {
+        Debug.LogError("✗ Health slider is NULL! Drag PlayerHealthBar into the field!");
+    }
+}
 
     void OnCollisionStay(Collision col) => isGrounded = true;
     void OnCollisionExit(Collision col) => isGrounded = false;
@@ -69,6 +92,12 @@ public class PlayerController : ValidatedMonoBehaviour
 
         // Animator
         animator.SetFloat(Speed, moveDir.magnitude);
+        // TEMPORARY: Add this inside Update() for testing
+if (Keyboard.current.tKey.wasPressedThisFrame)
+{
+    TakeDamage(1);
+    Debug.Log("Damage taken! Health: " + currentHealth);
+}
     }
 
     void FixedUpdate()
@@ -82,5 +111,54 @@ public class PlayerController : ValidatedMonoBehaviour
         {
             rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
         }
+    }
+
+   public void TakeDamage(int amount)
+{
+    currentHealth -= amount;
+    Debug.Log($"Damage taken! Current health: {currentHealth}");
+    
+    if (healthSlider != null)
+    {
+        healthSlider.value = currentHealth;
+        Debug.Log($"Slider value set to: {healthSlider.value}");
+    }
+    else
+    {
+        Debug.LogError("Health slider is NULL!");
+    }
+
+    StartCoroutine(DamageFlash());
+
+    if (currentHealth <= 0)
+        Die();
+}
+
+IEnumerator DamageFlash()
+{
+    var renderers = GetComponentsInChildren<Renderer>();
+    var originalColors = new Color[renderers.Length];
+    
+    for (int i = 0; i < renderers.Length; i++)
+        originalColors[i] = renderers[i].material.color;
+
+    foreach (var r in renderers)
+        r.material.color = Color.red;
+
+    yield return new WaitForSeconds(0.2f);
+
+    for (int i = 0; i < renderers.Length; i++)
+        renderers[i].material.color = originalColors[i];
+}
+
+    void Die()
+    {
+        // Respawn at spawn point (adjust coordinates as needed)
+        transform.position = new Vector3(0f, 1f, 0f);
+        currentHealth = maxHealth;
+        if (healthSlider != null)
+            healthSlider.value = currentHealth;
+        
+        // Optional: Add respawn effects or sound here
     }
 }
