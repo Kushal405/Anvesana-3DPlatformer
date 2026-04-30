@@ -14,11 +14,6 @@ public class PlayerController : ValidatedMonoBehaviour
     [Header("Death UI")]
     public GameObject deathPanel;
 
-    [Header("Step / Slope Settings")]
-    [SerializeField] float maxStepHeight = 0.4f;
-    [SerializeField] float stepSmooth = 0.1f;
-    [SerializeField] float maxSlopeAngle = 45f;
-
     [Header("References")]
     [SerializeField, Self] Rigidbody rb;
     [SerializeField, Self] Animator animator;
@@ -28,15 +23,15 @@ public class PlayerController : ValidatedMonoBehaviour
     [SerializeField] float moveSpeed = 3f;
     [SerializeField] float jumpForce = 6f;
     [SerializeField] float rotationSpeed = 720f;
-
-    // FIX: Use a speed value that maps to your blend tree thresholds (0, 0.5, 1)
-    // We'll send 0.5 for walk and 1.0 for run (or just 0.5 always for walk)
-    [SerializeField] float animWalkSpeed = 0.5f; // ← tune this to match threshold
+    [SerializeField] float animWalkSpeed = 0.5f;
 
     static readonly int Speed = Animator.StringToHash("Speed");
     static readonly int IsJumping = Animator.StringToHash("IsJumping");
     static readonly int AttackHash = Animator.StringToHash("Attack");
     static readonly int DieHash = Animator.StringToHash("Die");
+
+    // FIX 1: Add GetHit hash — was missing, TakeDamage had no animation trigger
+    static readonly int GetHitHash = Animator.StringToHash("GetHit");
 
     Transform mainCam;
     Vector3 moveDir;
@@ -51,8 +46,6 @@ public class PlayerController : ValidatedMonoBehaviour
         rb.freezeRotation = true;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-
-
         rb.linearDamping = 0f;
         rb.angularDamping = 0.05f;
 
@@ -102,23 +95,22 @@ public class PlayerController : ValidatedMonoBehaviour
         var kb = Keyboard.current;
         float x = 0f, z = 0f;
 
-        if (kb.wKey.isPressed) z = 1f;
+        if (kb.wKey.isPressed) z =  1f;
         if (kb.sKey.isPressed) z = -1f;
         if (kb.aKey.isPressed) x = -1f;
-        if (kb.dKey.isPressed) x = 1f;
+        if (kb.dKey.isPressed) x =  1f;
 
-        // FIX: Explicitly zero moveDir when no input — don't rely on magnitude check
         bool hasInput = (x != 0f || z != 0f);
 
         if (hasInput)
         {
             var camF = mainCam.forward; camF.y = 0f; camF.Normalize();
-            var camR = mainCam.right; camR.y = 0f; camR.Normalize();
+            var camR = mainCam.right;   camR.y = 0f; camR.Normalize();
             moveDir = (camF * z + camR * x).normalized;
         }
         else
         {
-            moveDir = Vector3.zero; // ← explicit zero, no lingering direction
+            moveDir = Vector3.zero;
         }
 
         // Rotation
@@ -126,8 +118,7 @@ public class PlayerController : ValidatedMonoBehaviour
         {
             var targetRot = Quaternion.LookRotation(moveDir);
             transform.rotation = Quaternion.Slerp(
-                transform.rotation,
-                targetRot,
+                transform.rotation, targetRot,
                 rotationSpeed * Time.deltaTime);
         }
 
@@ -146,69 +137,64 @@ public class PlayerController : ValidatedMonoBehaviour
             AttackNearbyEnemies();
         }
 
-        // FIX: Send 0.5 for walk instead of raw moveDir.magnitude (which is 0 or 1)
-        // This correctly hits your blend tree's Walk threshold at 0.5
+        // Locomotion speed parameter
         float targetAnimSpeed = hasInput ? animWalkSpeed : 0f;
-
-        // Smooth the speed parameter so transitions aren't jarring
         float currentSpeed = animator.GetFloat(Speed);
-        float smoothedSpeed = Mathf.MoveTowards(currentSpeed, targetAnimSpeed, Time.deltaTime * 10f);
-        animator.SetFloat(Speed, smoothedSpeed);
+        animator.SetFloat(Speed,
+            Mathf.MoveTowards(currentSpeed, targetAnimSpeed, Time.deltaTime * 10f));
 
-        // Debug / test damage
+        // Test damage
         if (kb.tKey.wasPressedThisFrame && !isDead)
             TakeDamage(1);
     }
 
     void FixedUpdate()
-{
-    if (isDead) return;
-
-    if (IsGrounded)
     {
-        if (moveDir.sqrMagnitude > 0.01f)
+        if (isDead) return;
+
+        if (IsGrounded)
         {
-            // Project movement along the slope surface so uphill feels natural
-            Vector3 slopeMove = ProjectOnSlope(moveDir);
-            rb.linearVelocity = new Vector3(
-                slopeMove.x * moveSpeed,
-                slopeMove.y * moveSpeed, // ← allows Y to follow slope up/down
-                slopeMove.z * moveSpeed
-            );
+            if (moveDir.sqrMagnitude > 0.01f)
+            {
+                Vector3 slopeMove = ProjectOnSlope(moveDir);
+                rb.linearVelocity = new Vector3(
+                    slopeMove.x * moveSpeed,
+                    slopeMove.y * moveSpeed,
+                    slopeMove.z * moveSpeed
+                );
+            }
+            else
+            {
+                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            }
         }
-        else
+
+        if (!IsGrounded)
+            rb.AddForce(Vector3.down * 8f, ForceMode.Acceleration);
+    }
+
+    Vector3 ProjectOnSlope(Vector3 direction)
+    {
+        if (Physics.Raycast(transform.position + Vector3.up * 0.1f,
+            Vector3.down, out RaycastHit hit, 0.4f))
         {
-            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            return Vector3.ProjectOnPlane(direction, hit.normal).normalized;
         }
+        return direction;
     }
 
-    // Only add extra gravity in air — and keep it mild
-    if (!IsGrounded)
-    {
-        rb.AddForce(Vector3.down * 8f, ForceMode.Acceleration);
-    }
-}
-
-// Projects movement direction along the actual ground surface
-Vector3 ProjectOnSlope(Vector3 direction)
-{
-    if (Physics.Raycast(transform.position + Vector3.up * 0.1f, 
-        Vector3.down, out RaycastHit hit, 0.4f))
-    {
-        // Flatten movement along the slope normal
-        return Vector3.ProjectOnPlane(direction, hit.normal).normalized;
-    }
-    return direction;
-}
-
-    // ── Health / Death (unchanged) ──────────────────────────────────────────
+    // ── Health ─────────────────────────────────────────────────
 
     public void TakeDamage(int amount)
     {
         if (isDead) return;
         currentHealth -= amount;
         if (healthSlider != null) healthSlider.value = currentHealth;
+
+        // FIX 2: Added GetHit trigger so player reacts visually when hit
+        animator.SetTrigger(GetHitHash);
         StartCoroutine(DamageFlash());
+
         if (currentHealth <= 0) StartCoroutine(DieSequence());
     }
 
@@ -217,12 +203,18 @@ Vector3 ProjectOnSlope(Vector3 direction)
         var renderers = GetComponentsInChildren<Renderer>();
         var originalColors = new Color[renderers.Length];
         for (int i = 0; i < renderers.Length; i++)
-            originalColors[i] = renderers[i].material.color;
+            // FIX 3: Use _BaseColor for URP instead of .color
+            originalColors[i] = renderers[i].material
+                .GetColor(Shader.PropertyToID("_BaseColor"));
+
         foreach (var r in renderers)
-            r.material.color = Color.red;
+            r.material.SetColor(Shader.PropertyToID("_BaseColor"), Color.red);
+
         yield return new WaitForSeconds(0.2f);
+
         for (int i = 0; i < renderers.Length; i++)
-            renderers[i].material.color = originalColors[i];
+            renderers[i].material.SetColor(
+                Shader.PropertyToID("_BaseColor"), originalColors[i]);
     }
 
     IEnumerator DieSequence()
@@ -247,10 +239,10 @@ Vector3 ProjectOnSlope(Vector3 direction)
         animator.Rebind();
         animator.Update(0f);
         animator.SetBool(IsJumping, false);
-        animator.SetFloat(Speed, 0f); // ← ensure clean idle on respawn
+        animator.SetFloat(Speed, 0f);
     }
 
-    // ── Attack (unchanged) ─────────────────────────────────────────────────
+    // ── Attack ─────────────────────────────────────────────────
 
     void AttackNearbyEnemies()
     {
@@ -259,7 +251,15 @@ Vector3 ProjectOnSlope(Vector3 direction)
         {
             var enemy = hit.GetComponent<EnemyAI>();
             if (enemy != null)
+            {
                 enemy.TakeDamage(1);
+                continue;
+            }
+
+            // FIX 1 carry-over: also hit boss
+            var boss = hit.GetComponent<BossGuardian>();
+            if (boss != null)
+                boss.TakeDamage(1);
         }
     }
 }
