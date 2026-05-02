@@ -1,18 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using static PlayerInputActions; // ← this already gives you IPlayerActions
-
-// the manual IPlayerActions interface 
-// public interface IPlayerActions
-    // {
-    //     void OnMove(InputAction.CallbackContext context);
-    //     void OnLook(InputAction.CallbackContext context);
-    //     void OnMouseControlCamera(InputAction.CallbackContext context);
-    //     void OnJump(InputAction.CallbackContext context);
-    //     void OnFire(InputAction.CallbackContext context);
-    //     void OnRun(InputAction.CallbackContext context);
-    // }
+using static PlayerInputActions; 
 
 [CreateAssetMenu(fileName = "InputReader", menuName = "Platformer/Input Reader")]
 public class InputReader : ScriptableObject, PlayerInputActions.IPlayerActions // ← use full name
