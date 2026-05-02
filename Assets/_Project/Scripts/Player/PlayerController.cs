@@ -28,10 +28,10 @@ public class PlayerController : ValidatedMonoBehaviour
     [SerializeField] float rotationSpeed = 720f;
     [SerializeField] float animWalkSpeed = 0.5f;
 
-    static readonly int Speed      = Animator.StringToHash("Speed");
-    static readonly int IsJumping  = Animator.StringToHash("IsJumping");
+    static readonly int Speed = Animator.StringToHash("Speed");
+    static readonly int IsJumping = Animator.StringToHash("IsJumping");
     static readonly int AttackHash = Animator.StringToHash("Attack");
-    static readonly int DieHash    = Animator.StringToHash("Die");
+    static readonly int DieHash = Animator.StringToHash("Die");
     static readonly int GetHitHash = Animator.StringToHash("GetHit");
     static readonly int BaseColorID = Shader.PropertyToID("_BaseColor");
 
@@ -105,17 +105,17 @@ public class PlayerController : ValidatedMonoBehaviour
         var kb = Keyboard.current;
         float x = 0f, z = 0f;
 
-        if (kb.wKey.isPressed) z =  1f;
+        if (kb.wKey.isPressed) z = 1f;
         if (kb.sKey.isPressed) z = -1f;
         if (kb.aKey.isPressed) x = -1f;
-        if (kb.dKey.isPressed) x =  1f;
+        if (kb.dKey.isPressed) x = 1f;
 
         bool hasInput = (x != 0f || z != 0f);
 
         if (hasInput)
         {
             var camF = mainCam.forward; camF.y = 0f; camF.Normalize();
-            var camR = mainCam.right;   camR.y = 0f; camR.Normalize();
+            var camR = mainCam.right; camR.y = 0f; camR.Normalize();
             moveDir = (camF * z + camR * x).normalized;
         }
         else
@@ -151,6 +151,29 @@ public class PlayerController : ValidatedMonoBehaviour
 
         if (kb.tKey.wasPressedThisFrame && !isDead)
             TakeDamage(1);
+        var gp = Gamepad.current;
+        if (gp != null)
+        {
+            var stick = gp.leftStick.ReadValue();
+            if (stick.magnitude > 0.1f)
+            {
+                x = stick.x;
+                z = stick.y;
+            }
+
+            if (gp.buttonSouth.wasPressedThisFrame && IsGrounded && !isDead)
+            {
+                rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+                groundContactCount = 0;
+                animator.SetBool(IsJumping, true);
+            }
+
+            if (gp.buttonWest.wasPressedThisFrame && !isDead)
+            {
+                animator.SetTrigger(AttackHash);
+                AttackNearbyEnemies();
+            }
+        }
     }
 
     void FixedUpdate()
