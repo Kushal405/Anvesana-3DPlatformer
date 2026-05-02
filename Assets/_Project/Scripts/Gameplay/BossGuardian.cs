@@ -179,7 +179,7 @@ public class BossGuardian : MonoBehaviour
         isAttacking = true;
         animator.SetFloat(Speed, 0f);
         animator.SetTrigger(AttackHash);
-        Debug.Log("Boss attacking");
+        
 
         yield return new WaitForSeconds(0.45f);
 
@@ -192,7 +192,7 @@ public class BossGuardian : MonoBehaviour
             playerRb.AddForce(knockback * 5f, ForceMode.Impulse);
         }
         playerController?.TakeDamage(1);
-        Debug.Log("Boss dealt damage");
+        
 
         yield return new WaitForSeconds(0.8f);
         isAttacking = false;
@@ -201,7 +201,7 @@ public class BossGuardian : MonoBehaviour
     public void TakeDamage(int amount)
     {
         if (isDead || isInvincible) return;
-        Debug.Log($"Boss took {amount} damage. HP: {currentHealth - amount}/{maxHealth}");
+        
 
         currentHealth -= amount;
         if (bossHealthBar != null)
