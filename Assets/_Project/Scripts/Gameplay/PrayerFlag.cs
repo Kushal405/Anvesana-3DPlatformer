@@ -7,7 +7,7 @@ public class PrayerFlag : MonoBehaviour
     [SerializeField] float bobHeight = 0.3f;
 
     Vector3 startPos;
-    bool collected = false; 
+    bool collected = false;
 
     void Start() => startPos = transform.position;
 
@@ -20,10 +20,16 @@ public class PrayerFlag : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        if (collected) return; 
-        if (!other.CompareTag("Player")) return;
+        Debug.Log($"Flag trigger hit by: {other.name} tag: {other.tag}");
+
+        if (collected) return;
+
+        if (!other.CompareTag("Player") &&
+            !other.CompareTag("Player2")) return;
+
         collected = true;
-        GameManager.Instance.CollectFlag();
+        GameManager.Instance?.CollectFlag();
         gameObject.SetActive(false);
+        Debug.Log("Flag collected!");
     }
 }

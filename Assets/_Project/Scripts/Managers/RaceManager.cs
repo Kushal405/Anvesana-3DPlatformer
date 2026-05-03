@@ -17,34 +17,44 @@ public class RaceManager : MonoBehaviour
     bool raceActive = false;
 
     void Awake()
+{
+    if (Instance != null && Instance != this)
+    { Destroy(gameObject); return; }
+    Instance = this;
+
+    GameModeManager.EnsureExists();
+    stopwatch = new StopwatchTimer();
+}
+
+void Start()
+{
+    if (winPanel != null) winPanel.SetActive(false);
+
+    bool isMulti = GameModeManager.Instance != null &&
+        GameModeManager.CurrentMode ==
+        GameModeManager.GameMode.MultiPlayer;
+
+    Debug.Log($"RaceManager — isMulti: {isMulti}");
+
+    if (isMulti)
     {
-        if (Instance != null && Instance != this)
-        { Destroy(gameObject); return; }
-        Instance = this;
-
-        stopwatch = new StopwatchTimer();
-    }
-
-    void Start()
-    {
-        if (winPanel != null) winPanel.SetActive(false);
-
-        // Only run timer in multiplayer
-        bool isMulti = GameModeManager.CurrentMode ==
-            GameModeManager.GameMode.MultiPlayer;
-
-        if (isMulti)
+        stopwatch.Start();
+        raceActive = true;
+        if (timerText != null)
         {
-            stopwatch.Start();
-            raceActive = true;
+            timerText.gameObject.SetActive(true);
+            Debug.Log("Timer activated");
         }
         else
-        {
-            // Hide timer in singleplayer
-            if (timerText != null)
-                timerText.gameObject.SetActive(false);
-        }
+            Debug.LogError("Timer text not assigned!");
     }
+    else
+    {
+        raceActive = false;
+        if (timerText != null)
+            timerText.gameObject.SetActive(false);
+    }
+}
 
     void Update()
     {
@@ -52,11 +62,10 @@ public class RaceManager : MonoBehaviour
 
         stopwatch.Tick(Time.deltaTime);
 
-        // Format MM:SS:ms
         float t = stopwatch.GetTime();
         int minutes = (int)(t / 60f);
         int seconds = (int)(t % 60f);
-        int ms      = (int)((t * 100f) % 100f);
+        int ms = (int)((t * 100f) % 100f);
 
         if (timerText != null)
             timerText.text = $"{minutes:00}:{seconds:00}:{ms:00}";

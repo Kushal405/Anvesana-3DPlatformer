@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Collections;
 
-public class PlayerControllerP2 : ValidatedMonoBehaviour
+public class P2PlayerController : ValidatedMonoBehaviour
 {
     [Header("Health")]
     public int maxHealth = 3;
@@ -31,10 +31,10 @@ public class PlayerControllerP2 : ValidatedMonoBehaviour
     [Header("Camera")]
     [SerializeField] Camera p2Camera;
 
-    static readonly int Speed = Animator.StringToHash("Speed");
-    static readonly int IsJumping = Animator.StringToHash("IsJumping");
+    static readonly int Speed      = Animator.StringToHash("Speed");
+    static readonly int IsJumping  = Animator.StringToHash("IsJumping");
     static readonly int AttackHash = Animator.StringToHash("Attack");
-    static readonly int DieHash = Animator.StringToHash("Die");
+    static readonly int DieHash    = Animator.StringToHash("Die");
     static readonly int GetHitHash = Animator.StringToHash("GetHit");
     static readonly int BaseColorID = Shader.PropertyToID("_BaseColor");
 
@@ -47,29 +47,26 @@ public class PlayerControllerP2 : ValidatedMonoBehaviour
     bool IsGrounded => groundContactCount > 0;
 
     void Awake()
-{
- 
-    mainCam = p2Camera != null ? 
-        p2Camera.transform : Camera.main.transform;
-        
-    rb.freezeRotation = true;
-    rb.interpolation = RigidbodyInterpolation.Interpolate;
-    rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-    rb.linearDamping = 0f;
-    rb.angularDamping = 0.05f;
-    animator.applyRootMotion = false;
+    {
+        mainCam = p2Camera != null ?
+            p2Camera.transform : Camera.main.transform;
 
-    var go = new GameObject("CameraTarget_P2");
-    var t = go.transform;
-    t.SetParent(transform);
-    t.localPosition = new Vector3(0f, 1.5f, 0f);
-    cinemachineFreeLook.Target.TrackingTarget = t;
-    cinemachineFreeLook.Target.CustomLookAtTarget = false;
+        rb.freezeRotation = true;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        rb.linearDamping = 0f;
+        rb.angularDamping = 0.05f;
+        animator.applyRootMotion = false;
 
-    // P2 has no CinemachineInputAxisController — skip
-    cinemachineInput = cinemachineFreeLook
-        .GetComponent<CinemachineInputAxisController>();
-}
+        var go = new GameObject("CameraTarget_P2");
+        var t = go.transform;
+        t.SetParent(transform);
+        t.localPosition = new Vector3(0f, 1.5f, 0f);
+        cinemachineFreeLook.Target.TrackingTarget = t;
+        cinemachineFreeLook.Target.CustomLookAtTarget = false;
+        cinemachineInput = cinemachineFreeLook
+            .GetComponent<CinemachineInputAxisController>();
+    }
 
     void Start()
     {
@@ -109,19 +106,17 @@ public class PlayerControllerP2 : ValidatedMonoBehaviour
         var kb = Keyboard.current;
         float x = 0f, z = 0f;
 
-        // P2 — Arrow keys
-        if (kb.upArrowKey.isPressed) z = 1f;
-        if (kb.downArrowKey.isPressed) z = -1f;
-        if (kb.leftArrowKey.isPressed) x = -1f;
-        if (kb.rightArrowKey.isPressed) x = 1f;
+        if (kb.upArrowKey.isPressed)    z =  1f;
+        if (kb.downArrowKey.isPressed)  z = -1f;
+        if (kb.leftArrowKey.isPressed)  x = -1f;
+        if (kb.rightArrowKey.isPressed) x =  1f;
 
         bool hasInput = (x != 0f || z != 0f);
 
         if (hasInput)
         {
-
             var camF = mainCam.forward; camF.y = 0f; camF.Normalize();
-            var camR = mainCam.right; camR.y = 0f; camR.Normalize();
+            var camR = mainCam.right;   camR.y = 0f; camR.Normalize();
             moveDir = (camF * z + camR * x).normalized;
         }
         else
@@ -137,7 +132,7 @@ public class PlayerControllerP2 : ValidatedMonoBehaviour
                 rotationSpeed * Time.deltaTime);
         }
 
-        // P2 Jump → numpad 0 or period
+        // Jump
         if (kb.periodKey.wasPressedThisFrame && IsGrounded && !isDead)
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
@@ -145,16 +140,17 @@ public class PlayerControllerP2 : ValidatedMonoBehaviour
             animator.SetBool(IsJumping, true);
         }
 
-        // P2 Attack → slash key
         if (kb.slashKey.wasPressedThisFrame && !isDead)
         {
             animator.SetTrigger(AttackHash);
+            AttackNearbyEnemies();
         }
 
         float targetAnimSpeed = hasInput ? animWalkSpeed : 0f;
         float currentSpeed = animator.GetFloat(Speed);
         animator.SetFloat(Speed,
-            Mathf.MoveTowards(currentSpeed, targetAnimSpeed, Time.deltaTime * 10f));
+            Mathf.MoveTowards(currentSpeed, targetAnimSpeed,
+                Time.deltaTime * 10f));
     }
 
     void FixedUpdate()
@@ -173,7 +169,8 @@ public class PlayerControllerP2 : ValidatedMonoBehaviour
             }
             else
             {
-                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+                rb.linearVelocity = new Vector3(
+                    0f, rb.linearVelocity.y, 0f);
             }
         }
 
@@ -273,6 +270,20 @@ public class PlayerControllerP2 : ValidatedMonoBehaviour
     {
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+        UnityEngine.SceneManagement.SceneManager
+            .LoadScene("MainMenu");
+    }
+
+    void AttackNearbyEnemies()
+    {
+        Collider[] hits = Physics.OverlapSphere(
+            transform.position, 2f);
+        foreach (var hit in hits)
+        {
+            var enemy = hit.GetComponent<EnemyAI>();
+            if (enemy != null) { enemy.TakeDamage(1); continue; }
+            var boss = hit.GetComponent<BossGuardian>();
+            if (boss != null) boss.TakeDamage(1);
+        }
     }
 }

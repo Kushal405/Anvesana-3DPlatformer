@@ -3,7 +3,6 @@ using KBCore.Refs;
 using Unity.Cinemachine;
 using UnityEngine;
 
-
 public class CameraManager : ValidatedMonoBehaviour
 {
     [SerializeField] InputReader inputReader;
@@ -14,9 +13,32 @@ public class CameraManager : ValidatedMonoBehaviour
     bool isDeviceMouse;
     CinemachineOrbitalFollow orbitalFollow;
 
+    bool isMultiplayer = false;
+
     void Awake()
     {
-        orbitalFollow = freeLookCamera.GetComponent<CinemachineOrbitalFollow>();
+        orbitalFollow = freeLookCamera
+            .GetComponent<CinemachineOrbitalFollow>();
+    }
+
+    void Start()
+    {
+        GameModeManager.EnsureExists();
+        
+        isMultiplayer = GameModeManager.Instance != null &&
+            GameModeManager.CurrentMode ==
+            GameModeManager.GameMode.MultiPlayer;
+
+        Debug.Log($"CameraManager — isMultiplayer: {isMultiplayer}");
+
+        // In multiplayer lock cursor immediately
+        // no right click needed
+        if (!isMultiplayer)
+        {
+            // Singleplayer starts with cursor locked
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
     }
 
     void OnEnable()
@@ -35,9 +57,7 @@ public class CameraManager : ValidatedMonoBehaviour
 
     void OnEnableMouseControl()
     {
-        // In multiplayer — no mouse camera lock
-        if (GameModeManager.CurrentMode ==
-            GameModeManager.GameMode.MultiPlayer) return;
+        if (isMultiplayer) return;
 
         isRightMousePressed = true;
         Cursor.lockState = CursorLockMode.Locked;
@@ -47,10 +67,11 @@ public class CameraManager : ValidatedMonoBehaviour
 
     void OnDisableMouseControl()
     {
+        if (isMultiplayer) return;
+
         isRightMousePressed = false;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        // Reset axes to prevent snapping
         orbitalFollow.HorizontalAxis.Value = 0;
         orbitalFollow.VerticalAxis.Value = 0;
     }
@@ -62,14 +83,13 @@ public class CameraManager : ValidatedMonoBehaviour
 
     void OnLook(Vector2 cameraMovement, bool isMouseDevice)
     {
-        // In multiplayer — disable mouse look entirely
-        if (GameModeManager.CurrentMode ==
-            GameModeManager.GameMode.MultiPlayer) return;
+        if (isMultiplayer) return;
 
         isDeviceMouse = isMouseDevice;
         if (isDeviceMouse && !isRightMousePressed) return;
 
-        float deviceMultiplier = isMouseDevice ? Time.fixedDeltaTime : 1f;
+        float deviceMultiplier = isMouseDevice ?
+            Time.fixedDeltaTime : 1f;
         orbitalFollow.HorizontalAxis.Value +=
             cameraMovement.x * speed * deviceMultiplier;
         orbitalFollow.VerticalAxis.Value +=

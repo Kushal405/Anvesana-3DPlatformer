@@ -28,10 +28,10 @@ public class PlayerController : ValidatedMonoBehaviour
     [SerializeField] float rotationSpeed = 720f;
     [SerializeField] float animWalkSpeed = 0.5f;
 
-    static readonly int Speed = Animator.StringToHash("Speed");
-    static readonly int IsJumping = Animator.StringToHash("IsJumping");
+    static readonly int Speed      = Animator.StringToHash("Speed");
+    static readonly int IsJumping  = Animator.StringToHash("IsJumping");
     static readonly int AttackHash = Animator.StringToHash("Attack");
-    static readonly int DieHash = Animator.StringToHash("Die");
+    static readonly int DieHash    = Animator.StringToHash("Die");
     static readonly int GetHitHash = Animator.StringToHash("GetHit");
     static readonly int BaseColorID = Shader.PropertyToID("_BaseColor");
 
@@ -65,7 +65,6 @@ public class PlayerController : ValidatedMonoBehaviour
 
     void Start()
     {
-        // Lock cursor on game start
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
@@ -105,17 +104,43 @@ public class PlayerController : ValidatedMonoBehaviour
         var kb = Keyboard.current;
         float x = 0f, z = 0f;
 
-        if (kb.wKey.isPressed) z = 1f;
+        if (kb.wKey.isPressed) z =  1f;
         if (kb.sKey.isPressed) z = -1f;
         if (kb.aKey.isPressed) x = -1f;
-        if (kb.dKey.isPressed) x = 1f;
+        if (kb.dKey.isPressed) x =  1f;
+
+        var gp = Gamepad.current;
+        if (gp != null)
+        {
+            var stick = gp.leftStick.ReadValue();
+            if (stick.magnitude > 0.1f)
+            {
+                x = stick.x;
+                z = stick.y;
+            }
+
+            if (gp.buttonSouth.wasPressedThisFrame &&
+                IsGrounded && !isDead)
+            {
+                rb.AddForce(Vector3.up * jumpForce,
+                    ForceMode.Impulse);
+                groundContactCount = 0;
+                animator.SetBool(IsJumping, true);
+            }
+
+            if (gp.buttonWest.wasPressedThisFrame && !isDead)
+            {
+                animator.SetTrigger(AttackHash);
+                AttackNearbyEnemies();
+            }
+        }
 
         bool hasInput = (x != 0f || z != 0f);
 
         if (hasInput)
         {
             var camF = mainCam.forward; camF.y = 0f; camF.Normalize();
-            var camR = mainCam.right; camR.y = 0f; camR.Normalize();
+            var camR = mainCam.right;   camR.y = 0f; camR.Normalize();
             moveDir = (camF * z + camR * x).normalized;
         }
         else
@@ -131,7 +156,8 @@ public class PlayerController : ValidatedMonoBehaviour
                 rotationSpeed * Time.deltaTime);
         }
 
-        if (kb.spaceKey.wasPressedThisFrame && IsGrounded && !isDead)
+        if (kb.spaceKey.wasPressedThisFrame &&
+            IsGrounded && !isDead)
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
             groundContactCount = 0;
@@ -147,33 +173,11 @@ public class PlayerController : ValidatedMonoBehaviour
         float targetAnimSpeed = hasInput ? animWalkSpeed : 0f;
         float currentSpeed = animator.GetFloat(Speed);
         animator.SetFloat(Speed,
-            Mathf.MoveTowards(currentSpeed, targetAnimSpeed, Time.deltaTime * 10f));
+            Mathf.MoveTowards(currentSpeed, targetAnimSpeed,
+                Time.deltaTime * 10f));
 
         if (kb.tKey.wasPressedThisFrame && !isDead)
             TakeDamage(1);
-        var gp = Gamepad.current;
-        if (gp != null)
-        {
-            var stick = gp.leftStick.ReadValue();
-            if (stick.magnitude > 0.1f)
-            {
-                x = stick.x;
-                z = stick.y;
-            }
-
-            if (gp.buttonSouth.wasPressedThisFrame && IsGrounded && !isDead)
-            {
-                rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-                groundContactCount = 0;
-                animator.SetBool(IsJumping, true);
-            }
-
-            if (gp.buttonWest.wasPressedThisFrame && !isDead)
-            {
-                animator.SetTrigger(AttackHash);
-                AttackNearbyEnemies();
-            }
-        }
     }
 
     void FixedUpdate()
@@ -192,7 +196,8 @@ public class PlayerController : ValidatedMonoBehaviour
             }
             else
             {
-                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+                rb.linearVelocity = new Vector3(
+                    0f, rb.linearVelocity.y, 0f);
             }
         }
 
@@ -207,8 +212,6 @@ public class PlayerController : ValidatedMonoBehaviour
             return Vector3.ProjectOnPlane(direction, hit.normal).normalized;
         return direction;
     }
-
-    // ── Health ──────────────────────────────────────────────────
 
     public void TakeDamage(int amount)
     {
@@ -239,24 +242,18 @@ public class PlayerController : ValidatedMonoBehaviour
         rb.linearVelocity = Vector3.zero;
         animator.SetTrigger(DieHash);
 
-        // Unlock cursor so buttons are clickable
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         if (cinemachineInput != null)
             cinemachineInput.enabled = false;
 
-        // Wait for die animation then show panel
-        // Panel stays until player clicks button
         yield return new WaitForSeconds(1.5f);
         if (deathPanel != null) deathPanel.SetActive(true);
     }
 
-    // ── Called by PLAY AGAIN button ─────────────────────────────
     public void Respawn()
     {
-        // Hide panel INSTANTLY on click — no delay
         if (deathPanel != null) deathPanel.SetActive(false);
-
         StopAllCoroutines();
 
         isDead = false;
@@ -266,7 +263,6 @@ public class PlayerController : ValidatedMonoBehaviour
 
         if (healthSlider != null) healthSlider.value = currentHealth;
 
-        // Use respawn point if assigned, else fallback
         if (respawnPoint != null)
             transform.position = respawnPoint.position;
         else
@@ -284,7 +280,6 @@ public class PlayerController : ValidatedMonoBehaviour
         animator.SetBool(IsJumping, false);
         animator.SetFloat(Speed, 0f);
 
-        // Re-enable input next frame
         StartCoroutine(ReenableInput());
     }
 
@@ -298,7 +293,6 @@ public class PlayerController : ValidatedMonoBehaviour
             cinemachineInput.enabled = true;
     }
 
-    // ── Called by QUIT button ───────────────────────────────────
     public void QuitGame()
     {
         Cursor.lockState = CursorLockMode.None;
@@ -307,11 +301,10 @@ public class PlayerController : ValidatedMonoBehaviour
             .LoadScene("MainMenu");
     }
 
-    // ── Attack ──────────────────────────────────────────────────
-
     void AttackNearbyEnemies()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, 2f);
+        Collider[] hits = Physics.OverlapSphere(
+            transform.position, 2f);
         foreach (var hit in hits)
         {
             var enemy = hit.GetComponent<EnemyAI>();

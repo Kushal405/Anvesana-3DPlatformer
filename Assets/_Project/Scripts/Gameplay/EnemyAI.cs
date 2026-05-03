@@ -24,48 +24,63 @@ public class EnemyAI : MonoBehaviour
     int currentHealth;
 
     Transform player;
+    Transform player2;
+    Transform currentChaseTarget;
+
     Animator animator;
     NavMeshAgent agent;
     bool isAttacking = false;
     float attackAnimDuration = 0.8f;
-    Transform currentTarget;
+    Transform patrolTarget;
 
     void Start()
     {
-        currentTarget = pointB;
-        player = GameObject.FindGameObjectWithTag("Player").transform;
+        patrolTarget = pointB;
+
+        var p1GO = GameObject.FindGameObjectWithTag("Player");
+        var p2GO = GameObject.FindGameObjectWithTag("Player2");
+        if (p1GO != null) player = p1GO.transform;
+        if (p2GO != null) player2 = p2GO.transform;
+
         animator = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
 
-        // Fix sinking — let NavMeshAgent control Y position
         agent.updatePosition = true;
         agent.updateRotation = true;
-        
 
-        // Disable Rigidbody gravity — NavMeshAgent handles grounding
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb != null)
         {
             rb.useGravity = false;
-            rb.isKinematic = true; // NavMeshAgent takes full control
+            rb.isKinematic = true;
         }
 
         currentHealth = maxHealth;
+    }
 
+    Transform GetClosestPlayer()
+    {
+        if (player == null && player2 == null) return null;
+        if (player == null) return player2;
+        if (player2 == null) return player;
 
+        float d1 = Vector3.Distance(transform.position, player.position);
+        float d2 = Vector3.Distance(transform.position, player2.position);
+        return d1 < d2 ? player : player2;
     }
 
     void Update()
     {
-        if (player == null) return;
+        currentChaseTarget = GetClosestPlayer();
+        if (currentChaseTarget == null) return;
 
-        float dist = Vector3.Distance(transform.position, player.position);
+        float dist = Vector3.Distance(
+            transform.position, currentChaseTarget.position);
 
         if (isAttacking) return;
 
         if (dist <= attackRange)
         {
-            // In attack range — stop and attack
             agent.ResetPath();
             animator?.SetFloat("Speed", 0f);
             TryAttack();
@@ -81,47 +96,60 @@ public class EnemyAI : MonoBehaviour
     }
 
     void Patrol()
-{
-    if (currentTarget == null) return;
+    {
+        if (patrolTarget == null) return;
+        agent.stoppingDistance = 0.2f;
+        agent.speed = patrolSpeed;
+        agent.SetDestination(patrolTarget.position);
+        animator?.SetFloat("Speed", patrolSpeed);
 
-    // Set stopping distance LOW for patrol
-    agent.stoppingDistance = 0.2f;
-    agent.speed = patrolSpeed;
-    agent.SetDestination(currentTarget.position);
-    animator?.SetFloat("Speed", patrolSpeed);
+        if (Vector3.Distance(
+            transform.position, patrolTarget.position) < 0.5f)
+            patrolTarget = patrolTarget == pointA ? pointB : pointA;
+    }
 
-    if (Vector3.Distance(transform.position, currentTarget.position) < 0.5f)
-        currentTarget = currentTarget == pointA ? pointB : pointA;
-}
+    void ChasePlayer()
+    {
+        agent.stoppingDistance = attackRange - 0.3f;
+        agent.speed = chaseSpeed;
+        agent.SetDestination(currentChaseTarget.position);
+        animator?.SetFloat("Speed", chaseSpeed);
+    }
 
-void ChasePlayer()
-{
-    // Restore attack stopping distance when chasing
-    agent.stoppingDistance = attackRange - 0.3f;
-    agent.speed = chaseSpeed;
-    agent.SetDestination(player.position);
-    animator?.SetFloat("Speed", chaseSpeed);
-}
     void TryAttack()
     {
         if (Time.time - lastAttackTime < attackCooldown) return;
         if (isAttacking) return;
 
-        // Face player before attacking
-        Vector3 dir = (player.position - transform.position);
+        Vector3 dir = (currentChaseTarget.position - transform.position);
         dir.y = 0;
         if (dir != Vector3.zero)
             transform.rotation = Quaternion.LookRotation(dir);
 
-        PlayerController pc = player.GetComponent<PlayerController>();
+        PlayerController pc = currentChaseTarget
+            .GetComponent<PlayerController>();
+        P2PlayerController pc2 = currentChaseTarget
+            .GetComponent<P2PlayerController>();
+
         if (pc != null)
         {
             lastAttackTime = Time.time;
             pc.TakeDamage(damage);
-            animator?.SetFloat("Speed", 0f);
-            animator?.SetTrigger("Attack");
-            StartCoroutine(AttackRoutine());
+            PlayAttackAnim();
         }
+        else if (pc2 != null)
+        {
+            lastAttackTime = Time.time;
+            pc2.TakeDamage(damage);
+            PlayAttackAnim();
+        }
+    }
+
+    void PlayAttackAnim()
+    {
+        animator?.SetFloat("Speed", 0f);
+        animator?.SetTrigger("Attack");
+        StartCoroutine(AttackRoutine());
     }
 
     IEnumerator AttackRoutine()
@@ -136,7 +164,7 @@ void ChasePlayer()
     public void TakeDamage(int amount)
     {
         currentHealth -= amount;
-        Debug.Log($"Enemy took damage! Health: {currentHealth}/{maxHealth}");
+        Debug.Log($"Enemy took damage! HP: {currentHealth}/{maxHealth}");
         StartCoroutine(DamageFlash());
         if (currentHealth <= 0) Die();
     }
@@ -145,17 +173,16 @@ void ChasePlayer()
     {
         var renderers = GetComponentsInChildren<Renderer>();
         var originalColors = new Color[renderers.Length];
-
         for (int i = 0; i < renderers.Length; i++)
-            originalColors[i] = renderers[i].material.color;
-
+            originalColors[i] = renderers[i].material
+                .GetColor(Shader.PropertyToID("_BaseColor"));
         foreach (var r in renderers)
-            r.material.color = Color.red;
-
+            r.material.SetColor(
+                Shader.PropertyToID("_BaseColor"), Color.red);
         yield return new WaitForSeconds(0.2f);
-
         for (int i = 0; i < renderers.Length; i++)
-            renderers[i].material.color = originalColors[i];
+            renderers[i].material.SetColor(
+                Shader.PropertyToID("_BaseColor"), originalColors[i]);
     }
 
     void Die()
@@ -164,7 +191,6 @@ void ChasePlayer()
         Destroy(gameObject);
     }
 
-    // Visualize attack range in editor
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;
