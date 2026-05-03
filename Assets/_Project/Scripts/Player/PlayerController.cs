@@ -11,6 +11,10 @@ public class PlayerController : ValidatedMonoBehaviour
     int currentHealth;
     public UnityEngine.UI.Slider healthSlider;
 
+    [Header("Air Control")]
+    [SerializeField] float airControl = 0.3f;
+    [SerializeField] float airDamping = 0.98f;
+
     [Header("Death UI")]
     public GameObject deathPanel;
 
@@ -23,16 +27,16 @@ public class PlayerController : ValidatedMonoBehaviour
     [SerializeField, Anywhere] CinemachineCamera cinemachineFreeLook;
 
     [Header("Settings")]
-    [SerializeField] float moveSpeed = 3f;
-    [SerializeField] float jumpForce = 6f;
+    [SerializeField] float moveSpeed     = 3f;
+    [SerializeField] float jumpForce     = 6f;
     [SerializeField] float rotationSpeed = 720f;
     [SerializeField] float animWalkSpeed = 0.5f;
 
-    static readonly int Speed      = Animator.StringToHash("Speed");
-    static readonly int IsJumping  = Animator.StringToHash("IsJumping");
-    static readonly int AttackHash = Animator.StringToHash("Attack");
-    static readonly int DieHash    = Animator.StringToHash("Die");
-    static readonly int GetHitHash = Animator.StringToHash("GetHit");
+    static readonly int Speed       = Animator.StringToHash("Speed");
+    static readonly int IsJumping   = Animator.StringToHash("IsJumping");
+    static readonly int AttackHash  = Animator.StringToHash("Attack");
+    static readonly int DieHash     = Animator.StringToHash("Die");
+    static readonly int GetHitHash  = Animator.StringToHash("GetHit");
     static readonly int BaseColorID = Shader.PropertyToID("_BaseColor");
 
     Transform mainCam;
@@ -43,21 +47,28 @@ public class PlayerController : ValidatedMonoBehaviour
     int groundContactCount = 0;
     bool IsGrounded => groundContactCount > 0;
 
+    float jumpInputLockTime = 0f;
+    const float JUMP_LOCK_DURATION = 0.15f;
+
+    // ─────────────────────────────────────────────────────────────────────
+    // LIFECYCLE
+    // ─────────────────────────────────────────────────────────────────────
+
     void Awake()
     {
         mainCam = Camera.main.transform;
         rb.freezeRotation = true;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-        rb.linearDamping = 0f;
+        rb.linearDamping  = 0f;
         rb.angularDamping = 0.05f;
         animator.applyRootMotion = false;
 
         var go = new GameObject("CameraTarget");
-        var t = go.transform;
+        var t  = go.transform;
         t.SetParent(transform);
         t.localPosition = new Vector3(0f, 1.5f, 0f);
-        cinemachineFreeLook.Target.TrackingTarget = t;
+        cinemachineFreeLook.Target.TrackingTarget     = t;
         cinemachineFreeLook.Target.CustomLookAtTarget = false;
         cinemachineInput = cinemachineFreeLook
             .GetComponent<CinemachineInputAxisController>();
@@ -66,18 +77,22 @@ public class PlayerController : ValidatedMonoBehaviour
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        Cursor.visible   = false;
 
         currentHealth = maxHealth;
         if (healthSlider != null)
         {
             healthSlider.minValue = 0;
             healthSlider.maxValue = maxHealth;
-            healthSlider.value = currentHealth;
+            healthSlider.value    = currentHealth;
         }
         if (deathPanel != null)
             deathPanel.SetActive(false);
     }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // GROUNDING
+    // ─────────────────────────────────────────────────────────────────────
 
     void OnCollisionEnter(Collision col)
     {
@@ -97,9 +112,17 @@ public class PlayerController : ValidatedMonoBehaviour
         groundContactCount = Mathf.Max(0, groundContactCount - 1);
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // UPDATE — INPUT
+    // ─────────────────────────────────────────────────────────────────────
+
     void Update()
     {
         if (isDead) return;
+
+        // Tick down jump lock timer
+        jumpInputLockTime -= Time.deltaTime;
+        bool inputLocked = jumpInputLockTime > 0f;
 
         var kb = Keyboard.current;
         float x = 0f, z = 0f;
@@ -109,45 +132,40 @@ public class PlayerController : ValidatedMonoBehaviour
         if (kb.aKey.isPressed) x = -1f;
         if (kb.dKey.isPressed) x =  1f;
 
+        // Gamepad / mobile on-screen controls
         var gp = Gamepad.current;
         if (gp != null)
         {
             var stick = gp.leftStick.ReadValue();
-            if (stick.magnitude > 0.1f)
-            {
-                x = stick.x;
-                z = stick.y;
-            }
+            if (stick.magnitude > 0.1f) { x = stick.x; z = stick.y; }
 
-            if (gp.buttonSouth.wasPressedThisFrame &&
-                IsGrounded && !isDead)
-            {
-                rb.AddForce(Vector3.up * jumpForce,
-                    ForceMode.Impulse);
-                groundContactCount = 0;
-                animator.SetBool(IsJumping, true);
-            }
+            if (gp.buttonSouth.wasPressedThisFrame && IsGrounded)
+                DoJump();
 
-            if (gp.buttonWest.wasPressedThisFrame && !isDead)
-            {
-                animator.SetTrigger(AttackHash);
-                AttackNearbyEnemies();
-            }
+            if (gp.buttonWest.wasPressedThisFrame)
+                DoAttack();
         }
 
-        bool hasInput = (x != 0f || z != 0f);
+        if (kb.spaceKey.wasPressedThisFrame && IsGrounded) DoJump();
+        if (kb.fKey.wasPressedThisFrame)                   DoAttack();
+        if (kb.tKey.wasPressedThisFrame)                   TakeDamage(1);
+
+        // Movement direction — locked for 0.15s after jump
+        bool hasInput = !inputLocked && (x != 0f || z != 0f);
 
         if (hasInput)
         {
             var camF = mainCam.forward; camF.y = 0f; camF.Normalize();
             var camR = mainCam.right;   camR.y = 0f; camR.Normalize();
-            moveDir = (camF * z + camR * x).normalized;
+            moveDir  = (camF * z + camR * x).normalized;
         }
-        else
+        else if (!inputLocked)
         {
             moveDir = Vector3.zero;
         }
+        // If inputLocked: keep existing moveDir (carries jump direction)
 
+        // Rotation
         if (moveDir.sqrMagnitude > 0.01f)
         {
             var targetRot = Quaternion.LookRotation(moveDir);
@@ -156,29 +174,18 @@ public class PlayerController : ValidatedMonoBehaviour
                 rotationSpeed * Time.deltaTime);
         }
 
-        if (kb.spaceKey.wasPressedThisFrame &&
-            IsGrounded && !isDead)
-        {
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-            groundContactCount = 0;
-            animator.SetBool(IsJumping, true);
-        }
-
-        if (kb.fKey.wasPressedThisFrame && !isDead)
-        {
-            animator.SetTrigger(AttackHash);
-            AttackNearbyEnemies();
-        }
-
-        float targetAnimSpeed = hasInput ? animWalkSpeed : 0f;
-        float currentSpeed = animator.GetFloat(Speed);
+        // Animator speed
+        float targetSpeed = hasInput ? animWalkSpeed : 0f;
         animator.SetFloat(Speed,
-            Mathf.MoveTowards(currentSpeed, targetAnimSpeed,
+            Mathf.MoveTowards(
+                animator.GetFloat(Speed),
+                targetSpeed,
                 Time.deltaTime * 10f));
-
-        if (kb.tKey.wasPressedThisFrame && !isDead)
-            TakeDamage(1);
     }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // FIXED UPDATE — PHYSICS
+    // ─────────────────────────────────────────────────────────────────────
 
     void FixedUpdate()
     {
@@ -189,10 +196,14 @@ public class PlayerController : ValidatedMonoBehaviour
             if (moveDir.sqrMagnitude > 0.01f)
             {
                 Vector3 slopeMove = ProjectOnSlope(moveDir);
-                rb.linearVelocity = new Vector3(
+                Vector3 velocity  = new Vector3(
                     slopeMove.x * moveSpeed,
-                    slopeMove.y * moveSpeed,
+                    rb.linearVelocity.y,
                     slopeMove.z * moveSpeed);
+                Vector3 platformVel = GetPlatformVelocity();
+platformVel.y = 0f;
+velocity += platformVel * 0.4f;
+                rb.linearVelocity = velocity;
             }
             else
             {
@@ -200,25 +211,78 @@ public class PlayerController : ValidatedMonoBehaviour
                     0f, rb.linearVelocity.y, 0f);
             }
         }
+        else
+        {
+            if (moveDir.sqrMagnitude > 0.01f)
+            {
+                Vector3 airForce = new Vector3(
+                    moveDir.x * moveSpeed * airControl,
+                    0f,
+                    moveDir.z * moveSpeed * airControl);
+                rb.AddForce(airForce, ForceMode.VelocityChange);
 
-        if (!IsGrounded)
+                Vector3 horizontalVel = new Vector3(
+                    rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+                if (horizontalVel.magnitude > moveSpeed)
+                {
+                    Vector3 clamped = horizontalVel.normalized * moveSpeed;
+                    rb.linearVelocity = new Vector3(
+                        clamped.x, rb.linearVelocity.y, clamped.z);
+                }
+            }
+            else
+            {
+                rb.linearVelocity = new Vector3(
+                    rb.linearVelocity.x * airDamping,
+                    rb.linearVelocity.y,
+                    rb.linearVelocity.z * airDamping);
+            }
+
             rb.AddForce(Vector3.down * 8f, ForceMode.Acceleration);
+        }
     }
 
-    Vector3 ProjectOnSlope(Vector3 direction)
+    // ─────────────────────────────────────────────────────────────────────
+    // ACTIONS
+    // ─────────────────────────────────────────────────────────────────────
+
+    void DoJump()
     {
-        if (Physics.Raycast(transform.position + Vector3.up * 0.1f,
-            Vector3.down, out RaycastHit hit, 0.4f))
-            return Vector3.ProjectOnPlane(direction, hit.normal).normalized;
-        return direction;
+        rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+        groundContactCount = 0;
+        animator.SetBool(IsJumping, true);
+        jumpInputLockTime = JUMP_LOCK_DURATION;
     }
+
+    void DoAttack()
+    {
+        animator.SetTrigger(AttackHash);
+        AttackNearbyEnemies();
+    }
+
+    void AttackNearbyEnemies()
+    {
+        Collider[] hits = Physics.OverlapSphere(transform.position, 2f);
+        foreach (var hit in hits)
+        {
+            var enemy = hit.GetComponent<EnemyAI>();
+            if (enemy != null) { enemy.TakeDamage(1); continue; }
+            var boss = hit.GetComponent<BossGuardian>();
+            if (boss != null) boss.TakeDamage(1);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // HEALTH
+    // ─────────────────────────────────────────────────────────────────────
 
     public void TakeDamage(int amount)
     {
         if (isDead) return;
         currentHealth -= amount;
         if (healthSlider != null) healthSlider.value = currentHealth;
-        animator.SetTrigger(GetHitHash);
+        if (currentHealth > 0)
+            animator.SetTrigger(GetHitHash);
         StartCoroutine(DamageFlash());
         if (currentHealth <= 0) StartCoroutine(DieSequence());
     }
@@ -226,14 +290,14 @@ public class PlayerController : ValidatedMonoBehaviour
     IEnumerator DamageFlash()
     {
         var renderers = GetComponentsInChildren<Renderer>();
-        var originalColors = new Color[renderers.Length];
+        var original  = new Color[renderers.Length];
         for (int i = 0; i < renderers.Length; i++)
-            originalColors[i] = renderers[i].material.GetColor(BaseColorID);
+            original[i] = renderers[i].material.GetColor(BaseColorID);
         foreach (var r in renderers)
             r.material.SetColor(BaseColorID, Color.red);
         yield return new WaitForSeconds(0.2f);
         for (int i = 0; i < renderers.Length; i++)
-            renderers[i].material.SetColor(BaseColorID, originalColors[i]);
+            renderers[i].material.SetColor(BaseColorID, original[i]);
     }
 
     IEnumerator DieSequence()
@@ -243,7 +307,7 @@ public class PlayerController : ValidatedMonoBehaviour
         animator.SetTrigger(DieHash);
 
         Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        Cursor.visible   = true;
         if (cinemachineInput != null)
             cinemachineInput.enabled = false;
 
@@ -251,25 +315,29 @@ public class PlayerController : ValidatedMonoBehaviour
         if (deathPanel != null) deathPanel.SetActive(true);
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // RESPAWN / QUIT
+    // ─────────────────────────────────────────────────────────────────────
+
     public void Respawn()
     {
         if (deathPanel != null) deathPanel.SetActive(false);
         StopAllCoroutines();
 
-        isDead = false;
-        currentHealth = maxHealth;
+        isDead             = false;
+        currentHealth      = maxHealth;
         groundContactCount = 0;
-        moveDir = Vector3.zero;
+        moveDir            = Vector3.zero;
+        jumpInputLockTime  = 0f;
 
         if (healthSlider != null) healthSlider.value = currentHealth;
 
-        if (respawnPoint != null)
-            transform.position = respawnPoint.position;
-        else
-            transform.position = new Vector3(0f, 1f, 0f);
+        transform.position = respawnPoint != null
+            ? respawnPoint.position
+            : new Vector3(0f, 1f, 0f);
 
         rb.linearVelocity = Vector3.zero;
-        rb.isKinematic = false;
+        rb.isKinematic    = false;
 
         animator.ResetTrigger(GetHitHash);
         animator.ResetTrigger(DieHash);
@@ -288,7 +356,7 @@ public class PlayerController : ValidatedMonoBehaviour
         yield return null;
         yield return null;
         Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        Cursor.visible   = false;
         if (cinemachineInput != null)
             cinemachineInput.enabled = true;
     }
@@ -296,21 +364,30 @@ public class PlayerController : ValidatedMonoBehaviour
     public void QuitGame()
     {
         Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-        UnityEngine.SceneManagement.SceneManager
-            .LoadScene("MainMenu");
+        Cursor.visible   = true;
+        UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
     }
 
-    void AttackNearbyEnemies()
+    // ─────────────────────────────────────────────────────────────────────
+    // HELPERS
+    // ─────────────────────────────────────────────────────────────────────
+
+    Vector3 ProjectOnSlope(Vector3 direction)
     {
-        Collider[] hits = Physics.OverlapSphere(
-            transform.position, 2f);
-        foreach (var hit in hits)
+        if (Physics.Raycast(transform.position + Vector3.up * 0.1f,
+            Vector3.down, out RaycastHit hit, 0.4f))
+            return Vector3.ProjectOnPlane(direction, hit.normal).normalized;
+        return direction;
+    }
+
+    Vector3 GetPlatformVelocity()
+    {
+        if (Physics.Raycast(transform.position, Vector3.down,
+            out RaycastHit hit, 1.5f))
         {
-            var enemy = hit.GetComponent<EnemyAI>();
-            if (enemy != null) { enemy.TakeDamage(1); continue; }
-            var boss = hit.GetComponent<BossGuardian>();
-            if (boss != null) boss.TakeDamage(1);
+            var platform = hit.collider.GetComponent<PlatformMover>();
+            if (platform != null) return platform.Velocity;
         }
+        return Vector3.zero;
     }
 }
