@@ -12,9 +12,14 @@ public class InputReader : ScriptableObject, PlayerInputActions.IPlayerActions /
     public event Action DisableMouseControlCamera = delegate { };
     public event Action<bool> Jump = delegate { };
 
+    public Vector2 MobileMoveInput;
+
     PlayerInputActions inputActions;
 
-    public Vector2 Direction => inputActions.Player.Move.ReadValue<Vector2>();
+    public Vector2 Direction =>
+    MobileMoveInput != Vector2.zero
+        ? MobileMoveInput
+        : inputActions.Player.Move.ReadValue<Vector2>();
 
     void OnEnable()
     {

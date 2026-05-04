@@ -8,6 +8,8 @@ public class CameraManager : ValidatedMonoBehaviour
     [SerializeField] InputReader inputReader;
     [SerializeField] CinemachineCamera freeLookCamera;
     [SerializeField] float speed = 1f;
+    [SerializeField] float mouseSensitivity = 1.5f;
+    [SerializeField] float touchSensitivity = 0.05f;
 
     bool isRightMousePressed;
     bool isDeviceMouse;
@@ -72,17 +74,18 @@ public class CameraManager : ValidatedMonoBehaviour
 
     void OnLook(Vector2 cameraMovement, bool isMouseDevice)
     {
-        isDeviceMouse = isMouseDevice;
-
         if (IsMultiplayer() && isMouseDevice) return;
-        if (isDeviceMouse && !isRightMousePressed) return;
+        if (isMouseDevice && !isRightMousePressed) return;
 
-        float deviceMultiplier = isMouseDevice ?
-            Time.fixedDeltaTime : 1f;
-        orbitalFollow.HorizontalAxis.Value +=
-            cameraMovement.x * speed * deviceMultiplier;
-        orbitalFollow.VerticalAxis.Value +=
-            cameraMovement.y * speed * deviceMultiplier;
+        float sensitivity = isMouseDevice ? mouseSensitivity : touchSensitivity;
+
+        // Normalize mouse vs touch behavior
+        float deltaMultiplier = isMouseDevice ? Time.deltaTime : 1f;
+
+        Vector2 finalInput = cameraMovement * sensitivity * deltaMultiplier;
+
+        orbitalFollow.HorizontalAxis.Value += finalInput.x;
+        orbitalFollow.VerticalAxis.Value += finalInput.y;
     }
 
     bool IsMultiplayer()

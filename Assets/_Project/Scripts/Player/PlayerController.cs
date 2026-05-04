@@ -32,6 +32,8 @@ public class PlayerController : ValidatedMonoBehaviour
     [SerializeField] float rotationSpeed = 720f;
     [SerializeField] float animWalkSpeed = 0.5f;
 
+    [SerializeField] InputReader inputReader;
+
     static readonly int Speed = Animator.StringToHash("Speed");
     static readonly int IsJumping = Animator.StringToHash("IsJumping");
     static readonly int AttackHash = Animator.StringToHash("Attack");
@@ -124,13 +126,9 @@ public class PlayerController : ValidatedMonoBehaviour
         jumpInputLockTime -= Time.deltaTime;
         bool inputLocked = jumpInputLockTime > 0f;
 
-        var kb = Keyboard.current;
-        float x = 0f, z = 0f;
-
-        if (kb.wKey.isPressed) z = 1f;
-        if (kb.sKey.isPressed) z = -1f;
-        if (kb.aKey.isPressed) x = -1f;
-        if (kb.dKey.isPressed) x = 1f;
+        Vector2 input = inputReader.Direction;
+        float x = input.x;
+        float z = input.y;
 
         // Gamepad / mobile on-screen controls
         var gp = Gamepad.current;
@@ -146,9 +144,7 @@ public class PlayerController : ValidatedMonoBehaviour
                 DoAttack();
         }
 
-        if (kb.spaceKey.wasPressedThisFrame && IsGrounded) DoJump();
-        if (kb.fKey.wasPressedThisFrame) DoAttack();
-        if (kb.tKey.wasPressedThisFrame) TakeDamage(1);
+
 
         // Movement direction — locked for 0.15s after jump
         bool hasInput = !inputLocked && (x != 0f || z != 0f);
@@ -249,7 +245,22 @@ public class PlayerController : ValidatedMonoBehaviour
     // ACTIONS
     // ─────────────────────────────────────────────────────────────────────
 
-    void DoJump()
+    void OnEnable()
+    {
+        inputReader.Jump += HandleJump;
+    }
+
+    void OnDisable()
+    {
+        inputReader.Jump -= HandleJump;
+    }
+
+    void HandleJump(bool pressed)
+    {
+        if (pressed && IsGrounded)
+            DoJump();
+    }
+    public void DoJump()
     {
         rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
         groundContactCount = 0;
@@ -258,7 +269,7 @@ public class PlayerController : ValidatedMonoBehaviour
         AudioManager.Instance?.PlayJump();
     }
 
-    void DoAttack()
+    public void DoAttack()
     {
         animator.SetTrigger(AttackHash);
         AttackNearbyEnemies();
@@ -355,67 +366,67 @@ public class PlayerController : ValidatedMonoBehaviour
     // ─────────────────────────────────────────────────────────────────────
 
     public void Respawn()
-{
+    {
         Debug.Log($"Respawning to: {(respawnPoint != null ? respawnPoint.position.ToString() : "DEFAULT (0,1,0)")}");
 
-    if (deathPanel != null) deathPanel.SetActive(false);
-    StopAllCoroutines();
+        if (deathPanel != null) deathPanel.SetActive(false);
+        StopAllCoroutines();
 
-    // Only reset LevelComplete if panel is actually visible
-    // Prevents interfering with normal gameplay timeScale
-    var levelComplete = FindFirstObjectByType<LevelComplete>();
-    if (levelComplete != null && levelComplete.IsCompleted)
-        levelComplete.ForceReset();
+        // Only reset LevelComplete if panel is actually visible
+        // Prevents interfering with normal gameplay timeScale
+        var levelComplete = FindFirstObjectByType<LevelComplete>();
+        if (levelComplete != null && levelComplete.IsCompleted)
+            levelComplete.ForceReset();
 
-    isDead             = false;
-    currentHealth      = maxHealth;
-    groundContactCount = 0;
-    moveDir            = Vector3.zero;
-    jumpInputLockTime  = 0f;
+        isDead = false;
+        currentHealth = maxHealth;
+        groundContactCount = 0;
+        moveDir = Vector3.zero;
+        jumpInputLockTime = 0f;
 
-    if (healthSlider != null) healthSlider.value = currentHealth;
+        if (healthSlider != null) healthSlider.value = currentHealth;
 
-if (respawnPoint == null)
-{
-    var respawnObj = GameObject.FindGameObjectWithTag("Respawn");
-    if (respawnObj != null)
-        respawnPoint = respawnObj.transform;
-}
-    transform.position = respawnPoint != null
-        ? respawnPoint.position
-        : new Vector3(0f, 1f, 0f);
+        if (respawnPoint == null)
+        {
+            var respawnObj = GameObject.FindGameObjectWithTag("Respawn");
+            if (respawnObj != null)
+                respawnPoint = respawnObj.transform;
+        }
+        transform.position = respawnPoint != null
+            ? respawnPoint.position
+            : new Vector3(0f, 1f, 0f);
 
-    rb.linearVelocity = Vector3.zero;
-    rb.isKinematic    = false;
+        rb.linearVelocity = Vector3.zero;
+        rb.isKinematic = false;
 
-    animator.ResetTrigger(GetHitHash);
-    animator.ResetTrigger(DieHash);
-    animator.ResetTrigger(AttackHash);
-    animator.Rebind();
-    animator.Update(0f);
-    animator.applyRootMotion = false;
-    animator.SetBool(IsJumping, false);
-    animator.SetFloat(Speed, 0f);
+        animator.ResetTrigger(GetHitHash);
+        animator.ResetTrigger(DieHash);
+        animator.ResetTrigger(AttackHash);
+        animator.Rebind();
+        animator.Update(0f);
+        animator.applyRootMotion = false;
+        animator.SetBool(IsJumping, false);
+        animator.SetFloat(Speed, 0f);
 
-    StartCoroutine(ReenableInput());
-}
+        StartCoroutine(ReenableInput());
+    }
 
-IEnumerator ReenableInput()
-{
-    yield return null;
-    yield return null;
-    Cursor.lockState = CursorLockMode.Locked;
-    Cursor.visible   = false;
-    if (cinemachineInput != null)
-        cinemachineInput.enabled = true;
-}
+    IEnumerator ReenableInput()
+    {
+        yield return null;
+        yield return null;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+        if (cinemachineInput != null)
+            cinemachineInput.enabled = true;
+    }
 
-public void QuitGame()
-{
-    Cursor.lockState = CursorLockMode.None;
-    Cursor.visible   = true;
-    UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
-}
+    public void QuitGame()
+    {
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+    }
     // ─────────────────────────────────────────────────────────────────────
     // HELPERS
     // ─────────────────────────────────────────────────────────────────────
