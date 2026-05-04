@@ -42,6 +42,7 @@ public class PlayerController : ValidatedMonoBehaviour
     Transform mainCam;
     Vector3 moveDir;
     bool isDead = false;
+    public bool IsDead => isDead;
     CinemachineInputAxisController cinemachineInput;
 
     int groundContactCount = 0;
@@ -76,8 +77,7 @@ public class PlayerController : ValidatedMonoBehaviour
 
     void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible   = false;
+        
 
         currentHealth = maxHealth;
         if (healthSlider != null)

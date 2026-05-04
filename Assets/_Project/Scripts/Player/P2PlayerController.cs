@@ -45,6 +45,7 @@ public class P2PlayerController : ValidatedMonoBehaviour
     Transform mainCam;
     Vector3 moveDir;
     bool isDead = false;
+    public bool IsDead => isDead;
     CinemachineInputAxisController cinemachineInput;
 
     int groundContactCount = 0;

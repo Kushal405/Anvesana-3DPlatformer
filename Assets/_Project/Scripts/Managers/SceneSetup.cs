@@ -49,13 +49,17 @@ public class SceneSetup : MonoBehaviour
                 p1Camera.rect = new Rect(0f, 0f, 0.5f, 1f);
             if (p2Camera != null)
                 p2Camera.rect = new Rect(0.5f, 0f, 0.5f, 1f);
-        }
+                Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
         else
         {
             if (p1Camera != null)
                 p1Camera.rect = new Rect(0f, 0f, 1f, 1f);
             if (p2Camera != null)
                 p2Camera.gameObject.SetActive(false);
+                Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
         }
     }
 }

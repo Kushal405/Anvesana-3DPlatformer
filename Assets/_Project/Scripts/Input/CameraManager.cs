@@ -13,8 +13,6 @@ public class CameraManager : ValidatedMonoBehaviour
     bool isDeviceMouse;
     CinemachineOrbitalFollow orbitalFollow;
 
-    bool isMultiplayer = false;
-
     void Awake()
     {
         orbitalFollow = freeLookCamera
@@ -24,20 +22,11 @@ public class CameraManager : ValidatedMonoBehaviour
     void Start()
     {
         GameModeManager.EnsureExists();
-        
-        isMultiplayer = GameModeManager.Instance != null &&
-            GameModeManager.CurrentMode ==
-            GameModeManager.GameMode.MultiPlayer;
 
-        Debug.Log($"CameraManager — isMultiplayer: {isMultiplayer}");
-
-        // In multiplayer lock cursor immediately
-        // no right click needed
-        if (!isMultiplayer)
+        if (orbitalFollow != null)
         {
-            // Singleplayer starts with cursor locked
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            orbitalFollow.HorizontalAxis.Value = 0;
+            orbitalFollow.VerticalAxis.Value = 0;
         }
     }
 
@@ -57,7 +46,7 @@ public class CameraManager : ValidatedMonoBehaviour
 
     void OnEnableMouseControl()
     {
-        if (isMultiplayer) return;
+        if (IsMultiplayer()) return;
 
         isRightMousePressed = true;
         Cursor.lockState = CursorLockMode.Locked;
@@ -67,7 +56,7 @@ public class CameraManager : ValidatedMonoBehaviour
 
     void OnDisableMouseControl()
     {
-        if (isMultiplayer) return;
+        if (IsMultiplayer()) return;
 
         isRightMousePressed = false;
         Cursor.lockState = CursorLockMode.None;
@@ -83,9 +72,9 @@ public class CameraManager : ValidatedMonoBehaviour
 
     void OnLook(Vector2 cameraMovement, bool isMouseDevice)
     {
-        if (isMultiplayer) return;
-
         isDeviceMouse = isMouseDevice;
+
+        if (IsMultiplayer() && isMouseDevice) return;
         if (isDeviceMouse && !isRightMousePressed) return;
 
         float deviceMultiplier = isMouseDevice ?
@@ -94,5 +83,12 @@ public class CameraManager : ValidatedMonoBehaviour
             cameraMovement.x * speed * deviceMultiplier;
         orbitalFollow.VerticalAxis.Value +=
             cameraMovement.y * speed * deviceMultiplier;
+    }
+
+    bool IsMultiplayer()
+    {
+        return GameModeManager.Instance != null &&
+            GameModeManager.CurrentMode ==
+            GameModeManager.GameMode.MultiPlayer;
     }
 }

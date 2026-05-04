@@ -26,12 +26,12 @@ public class EnemyAI : MonoBehaviour
     Transform player;
     Transform player2;
     Transform currentChaseTarget;
+    Transform patrolTarget;
 
     Animator animator;
     NavMeshAgent agent;
     bool isAttacking = false;
     float attackAnimDuration = 0.8f;
-    Transform patrolTarget;
 
     void Start()
     {
@@ -44,7 +44,6 @@ public class EnemyAI : MonoBehaviour
 
         animator = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
-
         agent.updatePosition = true;
         agent.updateRotation = true;
 
@@ -58,21 +57,36 @@ public class EnemyAI : MonoBehaviour
         currentHealth = maxHealth;
     }
 
+    // FIX: skip dead players
     Transform GetClosestPlayer()
     {
-        if (player == null && player2 == null) return null;
-        if (player == null) return player2;
-        if (player2 == null) return player;
+        bool p1Dead = player != null &&
+            player.GetComponent<PlayerController>()?.IsDead == true;
+        bool p2Dead = player2 != null &&
+            player2.GetComponent<P2PlayerController>()?.IsDead == true;
 
-        float d1 = Vector3.Distance(transform.position, player.position);
-        float d2 = Vector3.Distance(transform.position, player2.position);
-        return d1 < d2 ? player : player2;
+        Transform alive1 = p1Dead ? null : player;
+        Transform alive2 = p2Dead ? null : player2;
+
+        if (alive1 == null && alive2 == null) return null;
+        if (alive1 == null) return alive2;
+        if (alive2 == null) return alive1;
+
+        float d1 = Vector3.Distance(transform.position, alive1.position);
+        float d2 = Vector3.Distance(transform.position, alive2.position);
+        return d1 < d2 ? alive1 : alive2;
     }
 
     void Update()
     {
         currentChaseTarget = GetClosestPlayer();
-        if (currentChaseTarget == null) return;
+
+        // FIX: no alive players — just patrol
+        if (currentChaseTarget == null)
+        {
+            Patrol();
+            return;
+        }
 
         float dist = Vector3.Distance(
             transform.position, currentChaseTarget.position);
@@ -86,13 +100,9 @@ public class EnemyAI : MonoBehaviour
             TryAttack();
         }
         else if (dist <= chaseRange)
-        {
             ChasePlayer();
-        }
         else
-        {
             Patrol();
-        }
     }
 
     void Patrol()
@@ -121,15 +131,23 @@ public class EnemyAI : MonoBehaviour
         if (Time.time - lastAttackTime < attackCooldown) return;
         if (isAttacking) return;
 
-        Vector3 dir = (currentChaseTarget.position - transform.position);
-        dir.y = 0;
-        if (dir != Vector3.zero)
-            transform.rotation = Quaternion.LookRotation(dir);
+        float dist = Vector3.Distance(
+            transform.position, currentChaseTarget.position);
+        if (dist > attackRange + 0.5f) return;
 
         PlayerController pc = currentChaseTarget
             .GetComponent<PlayerController>();
         P2PlayerController pc2 = currentChaseTarget
             .GetComponent<P2PlayerController>();
+
+        // FIX: never attack dead players
+        if (pc != null && pc.IsDead) return;
+        if (pc2 != null && pc2.IsDead) return;
+
+        Vector3 dir = currentChaseTarget.position - transform.position;
+        dir.y = 0;
+        if (dir != Vector3.zero)
+            transform.rotation = Quaternion.LookRotation(dir);
 
         if (pc != null)
         {
@@ -164,7 +182,7 @@ public class EnemyAI : MonoBehaviour
     public void TakeDamage(int amount)
     {
         currentHealth -= amount;
-        Debug.Log($"Enemy took damage! HP: {currentHealth}/{maxHealth}");
+        Debug.Log($"Enemy HP: {currentHealth}/{maxHealth}");
         StartCoroutine(DamageFlash());
         if (currentHealth <= 0) Die();
     }
@@ -172,9 +190,9 @@ public class EnemyAI : MonoBehaviour
     IEnumerator DamageFlash()
     {
         var renderers = GetComponentsInChildren<Renderer>();
-        var originalColors = new Color[renderers.Length];
+        var origColors = new Color[renderers.Length];
         for (int i = 0; i < renderers.Length; i++)
-            originalColors[i] = renderers[i].material
+            origColors[i] = renderers[i].material
                 .GetColor(Shader.PropertyToID("_BaseColor"));
         foreach (var r in renderers)
             r.material.SetColor(
@@ -182,7 +200,7 @@ public class EnemyAI : MonoBehaviour
         yield return new WaitForSeconds(0.2f);
         for (int i = 0; i < renderers.Length; i++)
             renderers[i].material.SetColor(
-                Shader.PropertyToID("_BaseColor"), originalColors[i]);
+                Shader.PropertyToID("_BaseColor"), origColors[i]);
     }
 
     void Die()
