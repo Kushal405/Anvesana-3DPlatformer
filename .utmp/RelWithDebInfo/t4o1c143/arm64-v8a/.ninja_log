@@ -1,0 +1,23 @@
+# ninja log v5
+1025	1526	7996014242510648	D:/College Works/PP-game/Anvesana-Platformer/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/t4o1c143/obj/arm64-v8a/libswappywrapper.so	27842d44119383d1
+2	5559	7996014283319257	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	8d0719f390d24489
+142	1022	7996014237993137	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	5c4e875a9570226d
+70	3797	7996014265443125	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	78e96f551900cb08
+109	4929	7996014277037781	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	5801d1b27a69dc3b
+14	3880	7996014266564277	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	835969c768b6c1be
+57	3916	7996014266385567	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	939d109a6ad8f079
+28	4354	7996014271045148	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	d89029ce95565175
+85	4278	7996014270422183	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	b11164041ea836ea
+41	4959	7996014277346984	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	93756134fd1b35d9
+5560	5743	7996014285223591	D:/College Works/PP-game/Anvesana-Platformer/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/t4o1c143/obj/arm64-v8a/libgame.so	fbbbf55da3beb926
+182	563	7996049158715311	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	5c4e875a9570226d
+563	782	7996049160758160	D:/College Works/PP-game/Anvesana-Platformer/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/t4o1c143/obj/arm64-v8a/libswappywrapper.so	27842d44119383d1
+79	2331	7996049176363775	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	78e96f551900cb08
+116	2333	7996049176363775	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	939d109a6ad8f079
+90	2420	7996049177265550	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	835969c768b6c1be
+132	2423	7996049177275548	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	b11164041ea836ea
+42	2493	7996049177946959	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	d89029ce95565175
+164	2686	7996049179923099	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	5801d1b27a69dc3b
+146	2996	7996049182742623	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	93756134fd1b35d9
+102	3430	7996049187233354	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	8d0719f390d24489
+3431	3616	7996049189242910	D:/College Works/PP-game/Anvesana-Platformer/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/t4o1c143/obj/arm64-v8a/libgame.so	fbbbf55da3beb926

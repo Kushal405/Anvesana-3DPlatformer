@@ -81,8 +81,7 @@ public class GameManager : MonoBehaviour
         // Multiplayer: EITHER player collects all 4
         bool p1Done = p1Flags >= requiredFlags;
         bool p2Done = p2Flags >= requiredFlags;
-        bool shouldAwaken = isMulti ? 
-            (p1Done || p2Done) : p1Done;
+        bool shouldAwaken = (p1Done || p2Done);
 
         if (shouldAwaken && !monkAwakened)
         {
@@ -90,6 +89,9 @@ public class GameManager : MonoBehaviour
             Debug.Log("All flags collected! Monk awakens.");
             monkHead?.Awaken();
         }
+        Debug.Log($"Mode: {GameModeManager.CurrentMode}");
+Debug.Log($"P1: {p1Flags}, P2: {p2Flags}");
+Debug.Log($"p1Done: {p1Done}, p2Done: {p2Done}");
     }
 
     public void OnBossDefeated()

@@ -1,0 +1,8 @@
+D:/College Works/PP-game/Anvesana-Platformer/.utmp/RelWithDebInfo/t4o1c143/arm64-v8a/CMakeFiles/edit_cache.dir
+D:/College Works/PP-game/Anvesana-Platformer/.utmp/RelWithDebInfo/t4o1c143/arm64-v8a/CMakeFiles/rebuild_cache.dir
+D:/College Works/PP-game/Anvesana-Platformer/.utmp/RelWithDebInfo/t4o1c143/arm64-v8a/GameActivity/CMakeFiles/game.dir
+D:/College Works/PP-game/Anvesana-Platformer/.utmp/RelWithDebInfo/t4o1c143/arm64-v8a/GameActivity/CMakeFiles/edit_cache.dir
+D:/College Works/PP-game/Anvesana-Platformer/.utmp/RelWithDebInfo/t4o1c143/arm64-v8a/GameActivity/CMakeFiles/rebuild_cache.dir
+D:/College Works/PP-game/Anvesana-Platformer/.utmp/RelWithDebInfo/t4o1c143/arm64-v8a/FramePacing/CMakeFiles/swappywrapper.dir
+D:/College Works/PP-game/Anvesana-Platformer/.utmp/RelWithDebInfo/t4o1c143/arm64-v8a/FramePacing/CMakeFiles/edit_cache.dir
+D:/College Works/PP-game/Anvesana-Platformer/.utmp/RelWithDebInfo/t4o1c143/arm64-v8a/FramePacing/CMakeFiles/rebuild_cache.dir

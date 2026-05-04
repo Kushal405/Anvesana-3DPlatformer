@@ -18,17 +18,17 @@ public class SceneSetup : MonoBehaviour
     [SerializeField] Camera p1Camera;
     [SerializeField] Camera p2Camera;
     [SerializeField] GameObject p1DeathPanel;
-[SerializeField] GameObject p2DeathPanel;
+    [SerializeField] GameObject p2DeathPanel;
+
+    [Header("Flags")]
+    [SerializeField] GameObject p2Flags;
 
     void Start()
     {
-        bool isMulti = false;
+        GameModeManager.EnsureExists();
 
-        if (GameModeManager.Instance != null)
-        {
-            isMulti = GameModeManager.CurrentMode ==
-                GameModeManager.GameMode.MultiPlayer;
-        }
+        bool isMulti = GameModeManager.CurrentMode ==
+            GameModeManager.GameMode.MultiPlayer;
 
         Debug.Log($"SceneSetup — isMulti: {isMulti}");
         ApplyMode(isMulti);
@@ -44,6 +44,7 @@ public class SceneSetup : MonoBehaviour
         if (winPanel != null) winPanel.SetActive(false);
         if (completePanel != null) completePanel.SetActive(false);
         if (bossEnemy != null) bossEnemy.SetActive(!isMulti);
+        if (p2Flags != null) p2Flags.SetActive(isMulti);
 
         if (isMulti)
         {
@@ -51,19 +52,19 @@ public class SceneSetup : MonoBehaviour
                 p1Camera.rect = new Rect(0f, 0f, 0.5f, 1f);
             if (p2Camera != null)
                 p2Camera.rect = new Rect(0.5f, 0f, 0.5f, 1f);
-                Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-        if (p2DeathPanel != null)
-        p2DeathPanel.SetActive(false);
-    }
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+            if (p2DeathPanel != null)
+                p2DeathPanel.SetActive(false);
+        }
         else
         {
             if (p1Camera != null)
                 p1Camera.rect = new Rect(0f, 0f, 1f, 1f);
             if (p2Camera != null)
                 p2Camera.gameObject.SetActive(false);
-                Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
         }
     }
 }

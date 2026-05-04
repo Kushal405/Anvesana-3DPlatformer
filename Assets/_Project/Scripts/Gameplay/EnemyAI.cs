@@ -44,8 +44,12 @@ public class EnemyAI : MonoBehaviour
 
         animator = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
-        agent.updatePosition = true;
-        agent.updateRotation = true;
+
+        if (agent != null)
+        {
+            agent.updatePosition = true;
+            agent.updateRotation = true;
+        }
 
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb != null)
@@ -57,7 +61,12 @@ public class EnemyAI : MonoBehaviour
         currentHealth = maxHealth;
     }
 
-    // FIX: skip dead players
+    // SAFE CHECK
+    bool AgentReady()
+    {
+        return agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh;
+    }
+
     Transform GetClosestPlayer()
     {
         bool p1Dead = player != null &&
@@ -81,7 +90,6 @@ public class EnemyAI : MonoBehaviour
     {
         currentChaseTarget = GetClosestPlayer();
 
-        // FIX: no alive players — just patrol
         if (currentChaseTarget == null)
         {
             Patrol();
@@ -95,7 +103,7 @@ public class EnemyAI : MonoBehaviour
 
         if (dist <= attackRange)
         {
-            agent.ResetPath();
+            if (AgentReady()) agent.ResetPath();
             animator?.SetFloat("Speed", 0f);
             TryAttack();
         }
@@ -108,9 +116,12 @@ public class EnemyAI : MonoBehaviour
     void Patrol()
     {
         if (patrolTarget == null) return;
+        if (!AgentReady()) return;
+
         agent.stoppingDistance = 0.2f;
         agent.speed = patrolSpeed;
         agent.SetDestination(patrolTarget.position);
+
         animator?.SetFloat("Speed", patrolSpeed);
 
         if (Vector3.Distance(
@@ -120,9 +131,12 @@ public class EnemyAI : MonoBehaviour
 
     void ChasePlayer()
     {
+        if (!AgentReady()) return;
+
         agent.stoppingDistance = attackRange - 0.3f;
         agent.speed = chaseSpeed;
         agent.SetDestination(currentChaseTarget.position);
+
         animator?.SetFloat("Speed", chaseSpeed);
     }
 
@@ -172,9 +186,14 @@ public class EnemyAI : MonoBehaviour
     IEnumerator AttackRoutine()
     {
         isAttacking = true;
-        agent.enabled = false;
+
+        if (agent != null) agent.enabled = false;
+
         yield return new WaitForSeconds(attackAnimDuration);
-        agent.enabled = true;
+
+        if (agent != null && agent.isActiveAndEnabled)
+            agent.enabled = true;
+
         isAttacking = false;
     }
 
@@ -182,7 +201,9 @@ public class EnemyAI : MonoBehaviour
     {
         currentHealth -= amount;
         Debug.Log($"Enemy HP: {currentHealth}/{maxHealth}");
+
         StartCoroutine(DamageFlash());
+
         if (currentHealth <= 0) Die();
     }
 
@@ -190,13 +211,17 @@ public class EnemyAI : MonoBehaviour
     {
         var renderers = GetComponentsInChildren<Renderer>();
         var origColors = new Color[renderers.Length];
+
         for (int i = 0; i < renderers.Length; i++)
             origColors[i] = renderers[i].material
                 .GetColor(Shader.PropertyToID("_BaseColor"));
+
         foreach (var r in renderers)
             r.material.SetColor(
                 Shader.PropertyToID("_BaseColor"), Color.red);
+
         yield return new WaitForSeconds(0.2f);
+
         for (int i = 0; i < renderers.Length; i++)
             renderers[i].material.SetColor(
                 Shader.PropertyToID("_BaseColor"), origColors[i]);

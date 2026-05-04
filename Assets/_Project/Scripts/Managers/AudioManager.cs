@@ -36,7 +36,6 @@ public class AudioManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        // FIX: listen for scene changes
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
@@ -45,7 +44,6 @@ public class AudioManager : MonoBehaviour
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
-    // FIX: auto switch BGM per scene
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         if (scene.name == "MainMenu")
