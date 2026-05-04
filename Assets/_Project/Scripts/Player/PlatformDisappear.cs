@@ -17,7 +17,9 @@ public class DisappearPlatform : MonoBehaviour
 
     void OnCollisionEnter(Collision c)
     {
-        if (!triggered && c.gameObject.CompareTag("Player"))
+        if (!triggered && 
+        (c.gameObject.CompareTag("Player")||
+             c.gameObject.CompareTag("Player2")))
         {
             triggered = true;
             StartCoroutine(DisappearRoutine());
