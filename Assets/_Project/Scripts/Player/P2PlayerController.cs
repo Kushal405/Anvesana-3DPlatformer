@@ -30,16 +30,16 @@ public class P2PlayerController : ValidatedMonoBehaviour
     [SerializeField] Camera p2Camera;
 
     [Header("Settings")]
-    [SerializeField] float moveSpeed     = 3f;
-    [SerializeField] float jumpForce     = 6f;
+    [SerializeField] float moveSpeed = 3f;
+    [SerializeField] float jumpForce = 6f;
     [SerializeField] float rotationSpeed = 720f;
     [SerializeField] float animWalkSpeed = 0.5f;
 
-    static readonly int Speed       = Animator.StringToHash("Speed");
-    static readonly int IsJumping   = Animator.StringToHash("IsJumping");
-    static readonly int AttackHash  = Animator.StringToHash("Attack");
-    static readonly int DieHash     = Animator.StringToHash("Die");
-    static readonly int GetHitHash  = Animator.StringToHash("GetHit");
+    static readonly int Speed = Animator.StringToHash("Speed");
+    static readonly int IsJumping = Animator.StringToHash("IsJumping");
+    static readonly int AttackHash = Animator.StringToHash("Attack");
+    static readonly int DieHash = Animator.StringToHash("Die");
+    static readonly int GetHitHash = Animator.StringToHash("GetHit");
     static readonly int BaseColorID = Shader.PropertyToID("_BaseColor");
 
     Transform mainCam;
@@ -67,17 +67,17 @@ public class P2PlayerController : ValidatedMonoBehaviour
         rb.freezeRotation = true;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-        rb.linearDamping  = 0f;
+        rb.linearDamping = 0f;
         rb.angularDamping = 0.05f;
         animator.applyRootMotion = false;
 
         if (cinemachineFreeLook != null)
         {
             var go = new GameObject("CameraTarget_P2");
-            var t  = go.transform;
+            var t = go.transform;
             t.SetParent(transform);
             t.localPosition = new Vector3(0f, 1.5f, 0f);
-            cinemachineFreeLook.Target.TrackingTarget     = t;
+            cinemachineFreeLook.Target.TrackingTarget = t;
             cinemachineFreeLook.Target.CustomLookAtTarget = false;
             cinemachineInput = cinemachineFreeLook
                 .GetComponent<CinemachineInputAxisController>();
@@ -91,7 +91,7 @@ public class P2PlayerController : ValidatedMonoBehaviour
         {
             healthSlider.minValue = 0;
             healthSlider.maxValue = maxHealth;
-            healthSlider.value    = currentHealth;
+            healthSlider.value = currentHealth;
         }
         if (deathPanel != null)
             deathPanel.SetActive(false);
@@ -134,13 +134,13 @@ public class P2PlayerController : ValidatedMonoBehaviour
         var kb = Keyboard.current;
         float x = 0f, z = 0f;
 
-        if (kb.upArrowKey.isPressed)    z =  1f;
-        if (kb.downArrowKey.isPressed)  z = -1f;
-        if (kb.leftArrowKey.isPressed)  x = -1f;
-        if (kb.rightArrowKey.isPressed) x =  1f;
+        if (kb.upArrowKey.isPressed) z = 1f;
+        if (kb.downArrowKey.isPressed) z = -1f;
+        if (kb.leftArrowKey.isPressed) x = -1f;
+        if (kb.rightArrowKey.isPressed) x = 1f;
 
         if (kb.periodKey.wasPressedThisFrame && IsGrounded) DoJump();
-        if (kb.slashKey.wasPressedThisFrame)                DoAttack();
+        if (kb.slashKey.wasPressedThisFrame) DoAttack();
 
         // Movement direction — locked for 0.15s after jump
         bool hasInput = !inputLocked && (x != 0f || z != 0f);
@@ -148,8 +148,8 @@ public class P2PlayerController : ValidatedMonoBehaviour
         if (hasInput)
         {
             var camF = mainCam.forward; camF.y = 0f; camF.Normalize();
-            var camR = mainCam.right;   camR.y = 0f; camR.Normalize();
-            moveDir  = (camF * z + camR * x).normalized;
+            var camR = mainCam.right; camR.y = 0f; camR.Normalize();
+            moveDir = (camF * z + camR * x).normalized;
         }
         else if (!inputLocked)
         {
@@ -188,13 +188,13 @@ public class P2PlayerController : ValidatedMonoBehaviour
             if (moveDir.sqrMagnitude > 0.01f)
             {
                 Vector3 slopeMove = ProjectOnSlope(moveDir);
-                Vector3 velocity  = new Vector3(
+                Vector3 velocity = new Vector3(
                     slopeMove.x * moveSpeed,
                     rb.linearVelocity.y,
                     slopeMove.z * moveSpeed);
                 Vector3 platformVel = GetPlatformVelocity();
-platformVel.y = 0f;
-velocity += platformVel * 0.4f;
+                platformVel.y = 0f;
+                velocity += platformVel * 0.4f;
                 rb.linearVelocity = velocity;
             }
             else
@@ -244,12 +244,14 @@ velocity += platformVel * 0.4f;
         groundContactCount = 0;
         animator.SetBool(IsJumping, true);
         jumpInputLockTime = JUMP_LOCK_DURATION;
+        AudioManager.Instance?.PlayJump();
     }
 
     void DoAttack()
     {
         animator.SetTrigger(AttackHash);
         AttackNearbyEnemies();
+        AudioManager.Instance?.PlayAttack();
     }
 
     void AttackNearbyEnemies()
@@ -274,7 +276,10 @@ velocity += platformVel * 0.4f;
         currentHealth -= amount;
         if (healthSlider != null) healthSlider.value = currentHealth;
         if (currentHealth > 0)
+        {
             animator.SetTrigger(GetHitHash);
+            AudioManager.Instance?.PlayHurt();
+        }
         StartCoroutine(DamageFlash());
         if (currentHealth <= 0) StartCoroutine(DieSequence());
     }
@@ -282,7 +287,7 @@ velocity += platformVel * 0.4f;
     IEnumerator DamageFlash()
     {
         var renderers = GetComponentsInChildren<Renderer>();
-        var original  = new Color[renderers.Length];
+        var original = new Color[renderers.Length];
         for (int i = 0; i < renderers.Length; i++)
             original[i] = renderers[i].material.GetColor(BaseColorID);
         foreach (var r in renderers)
@@ -297,14 +302,28 @@ velocity += platformVel * 0.4f;
         isDead = true;
         rb.linearVelocity = Vector3.zero;
         animator.SetTrigger(DieHash);
+        AudioManager.Instance?.PlayDeath();
 
         Cursor.lockState = CursorLockMode.None;
-        Cursor.visible   = true;
+        Cursor.visible = true;
         if (cinemachineInput != null)
             cinemachineInput.enabled = false;
 
         yield return new WaitForSeconds(1.5f);
-        if (deathPanel != null) deathPanel.SetActive(true);
+
+        if (deathPanel != null)
+        {
+            var rect = deathPanel.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                // P2 always right half
+                rect.anchorMin = new Vector2(0.5f, 0f);
+                rect.anchorMax = new Vector2(1f, 1f);
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+            }
+            deathPanel.SetActive(true);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -316,11 +335,14 @@ velocity += platformVel * 0.4f;
         if (deathPanel != null) deathPanel.SetActive(false);
         StopAllCoroutines();
 
-        isDead             = false;
-        currentHealth      = maxHealth;
+        var levelComplete = FindFirstObjectByType<LevelComplete>();
+        if (levelComplete != null) levelComplete.ForceReset();
+
+        isDead = false;
+        currentHealth = maxHealth;
         groundContactCount = 0;
-        moveDir            = Vector3.zero;
-        jumpInputLockTime  = 0f;
+        moveDir = Vector3.zero;
+        jumpInputLockTime = 0f;
 
         if (healthSlider != null) healthSlider.value = currentHealth;
 
@@ -329,7 +351,7 @@ velocity += platformVel * 0.4f;
             : new Vector3(2f, 1f, 0f);
 
         rb.linearVelocity = Vector3.zero;
-        rb.isKinematic    = false;
+        rb.isKinematic = false;
 
         animator.ResetTrigger(GetHitHash);
         animator.ResetTrigger(DieHash);
@@ -348,7 +370,7 @@ velocity += platformVel * 0.4f;
         yield return null;
         yield return null;
         Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible   = false;
+        Cursor.visible = false;
         if (cinemachineInput != null)
             cinemachineInput.enabled = true;
     }
@@ -356,7 +378,7 @@ velocity += platformVel * 0.4f;
     public void QuitGame()
     {
         Cursor.lockState = CursorLockMode.None;
-        Cursor.visible   = true;
+        Cursor.visible = true;
         UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
     }
 

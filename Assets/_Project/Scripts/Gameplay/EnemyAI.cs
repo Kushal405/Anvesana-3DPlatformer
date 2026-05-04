@@ -140,7 +140,6 @@ public class EnemyAI : MonoBehaviour
         P2PlayerController pc2 = currentChaseTarget
             .GetComponent<P2PlayerController>();
 
-        // FIX: never attack dead players
         if (pc != null && pc.IsDead) return;
         if (pc2 != null && pc2.IsDead) return;
 
@@ -205,6 +204,7 @@ public class EnemyAI : MonoBehaviour
 
     void Die()
     {
+        AudioManager.Instance?.PlayEnemyDeath();
         Debug.Log("Enemy died!");
         Destroy(gameObject);
     }

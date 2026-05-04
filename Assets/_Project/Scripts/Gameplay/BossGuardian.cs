@@ -206,6 +206,7 @@ public class BossGuardian : MonoBehaviour
         currentHealth -= amount;
         if (bossHealthBar != null)
             bossHealthBar.value = currentHealth;
+            AudioManager.Instance?.PlayBossHurt();
 
         animator.SetTrigger(GetHitHash);
         StartCoroutine(HitFlash());
@@ -238,6 +239,7 @@ public class BossGuardian : MonoBehaviour
     IEnumerator DieSequence()
     {
         isDead = true;
+        AudioManager.Instance?.PlayBossDeath();
         isAttacking = false;
         rb.linearVelocity = Vector3.zero;
         rb.isKinematic = true;

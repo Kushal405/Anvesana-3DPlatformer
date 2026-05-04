@@ -17,6 +17,8 @@ public class SceneSetup : MonoBehaviour
     [Header("Cameras")]
     [SerializeField] Camera p1Camera;
     [SerializeField] Camera p2Camera;
+    [SerializeField] GameObject p1DeathPanel;
+[SerializeField] GameObject p2DeathPanel;
 
     void Start()
     {
@@ -51,6 +53,8 @@ public class SceneSetup : MonoBehaviour
                 p2Camera.rect = new Rect(0.5f, 0f, 0.5f, 1f);
                 Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+        if (p2DeathPanel != null)
+        p2DeathPanel.SetActive(false);
     }
         else
         {
