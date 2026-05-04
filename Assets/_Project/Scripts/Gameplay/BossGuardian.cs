@@ -164,7 +164,6 @@ public class BossGuardian : MonoBehaviour
             bool sprinting = dist > chaseRange * 0.5f;
             float speed = sprinting ? chaseSpeed : patrolSpeed;
 
-            // Send 1.0 for sprint, 0.5 for walk — matches blend tree
             animator.SetFloat(Speed, sprinting ? 1f : 0.5f);
 
             rb.linearVelocity = new Vector3(

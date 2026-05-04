@@ -59,7 +59,6 @@ public class LevelComplete : MonoBehaviour
         SceneManager.LoadScene("MainMenu");
     }
 
-    // ── Called by PlayerController.Respawn() only when IsCompleted = true ─
     public void ForceReset()
     {
         Time.timeScale = 1f;

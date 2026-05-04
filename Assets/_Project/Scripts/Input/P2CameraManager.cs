@@ -3,7 +3,7 @@ using Unity.Cinemachine;
 using UnityEngine;
 
 // Simplified camera for P2 — fixed follow, no rotation input needed
-// Saves rebuilding entire input system for deadline
+
 public class P2CameraManager : MonoBehaviour
 {
     [SerializeField] CinemachineCamera freeLookCamera;

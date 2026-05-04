@@ -14,7 +14,6 @@ public class PlatformCollisionHandler : MonoBehaviour
         if (!collision.gameObject.CompareTag("MovingPlatform")) return;
         if (collision.contacts[0].normal.y < 0.5f) return;
         
-        // Don't parent — instead kinematically follow
         transform.SetParent(collision.transform);
         rb.interpolation = RigidbodyInterpolation.Interpolate;
     }

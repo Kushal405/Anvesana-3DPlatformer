@@ -159,7 +159,6 @@ public class PlayerController : ValidatedMonoBehaviour
         {
             moveDir = Vector3.zero;
         }
-        // If inputLocked: keep existing moveDir (carries jump direction)
 
         // Rotation
         if (moveDir.sqrMagnitude > 0.01f)
@@ -372,8 +371,7 @@ public class PlayerController : ValidatedMonoBehaviour
         if (deathPanel != null) deathPanel.SetActive(false);
         StopAllCoroutines();
 
-        // Only reset LevelComplete if panel is actually visible
-        // Prevents interfering with normal gameplay timeScale
+        
         var levelComplete = FindFirstObjectByType<LevelComplete>();
         if (levelComplete != null && levelComplete.IsCompleted)
             levelComplete.ForceReset();

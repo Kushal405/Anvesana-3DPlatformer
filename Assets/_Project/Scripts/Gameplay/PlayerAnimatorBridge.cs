@@ -30,7 +30,6 @@ public class PlayerAnimatorBridge : MonoBehaviour
 
     void PlayState(string stateName, float crossFade = 0.15f, float minDuration = 0f)
     {
-        // Only block if same state AND within minimum duration window
         if (currentState == stateName && stateTimer > 0f) return;
 
         currentState = stateName;
@@ -44,15 +43,14 @@ public class PlayerAnimatorBridge : MonoBehaviour
     public void PlayIdle()   => PlayState(IDLE,    0.2f, 0f);
     public void PlayWalk()   => PlayState(WALK,    0.15f, 0f);
     public void PlaySprint() => PlayState(SPRINT,  0.15f, 0f);
-    public void PlayJump()   => PlayState(JUMP,    0.05f, 0.5f); // lock for 0.5s
-    public void PlayAttack() => PlayState(ATTACK,  0.05f, 0.8f); // lock for 0.8s
+    public void PlayJump()   => PlayState(JUMP,    0.05f, 0.5f); 
+    public void PlayAttack() => PlayState(ATTACK,  0.05f, 0.8f); 
     public void PlayGetHit() => PlayState(GET_HIT, 0.05f, 0.3f);
     public void PlayDie()    => PlayState(DIE,     0.1f,  2.5f);
     public void PlayGetUp()  => PlayState(GET_UP,  0.1f,  1f);
 
     public void UpdateLocomotion(bool hasInput, bool isGrounded, bool isSprinting)
     {
-        // Don't override locked states (attack, jump, die etc.)
         if (stateTimer > 0f) return;
 
         if (!isGrounded)

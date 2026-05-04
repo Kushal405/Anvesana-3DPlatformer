@@ -36,7 +36,6 @@ public class FlyCameraControl : MonoBehaviour
         // Adjust the speed of the camera movement with the scroll wheel
         moveSpeed += Input.GetAxis("Mouse ScrollWheel") * speedAdjustmentFactor;
 
-        // Add these lines to make the camera fly around
         float moveHorizontal = Input.GetAxis("Horizontal");
         float moveVertical = Input.GetAxis("Vertical");
         Vector3 movement = new Vector3(moveHorizontal, 0.0f, moveVertical);
@@ -58,7 +57,6 @@ public class FlyCameraControl : MonoBehaviour
         // Adjust the speed of the camera movement with the scroll wheel
         moveSpeed += Input.GetAxis("Mouse ScrollWheel") * speedAdjustmentFactor;
 
-        // Add these lines to make the camera fly around
         float moveHorizontal = Input.GetAxis("Horizontal");
         float moveVertical = Input.GetAxis("Vertical");
         Vector3 movement = new Vector3(moveHorizontal, 0.0f, moveVertical);

@@ -155,7 +155,7 @@ public class P2PlayerController : ValidatedMonoBehaviour
         {
             moveDir = Vector3.zero;
         }
-        // If inputLocked: keep existing moveDir (carries jump direction)
+        
 
         // Rotation
         if (moveDir.sqrMagnitude > 0.01f)
