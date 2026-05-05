@@ -1,16 +1,17 @@
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using static PlayerInputActions; 
+using static PlayerInputActions;
 
 [CreateAssetMenu(fileName = "InputReader", menuName = "Platformer/Input Reader")]
-public class InputReader : ScriptableObject, PlayerInputActions.IPlayerActions // ← use full name
+public class InputReader : ScriptableObject, PlayerInputActions.IPlayerActions 
 {
     public event Action<Vector2> Move = delegate { };
     public event Action<Vector2, bool> Look = delegate { };
     public event Action EnableMouseControlCamera = delegate { };
     public event Action DisableMouseControlCamera = delegate { };
     public event Action<bool> Jump = delegate { };
+    public event Action Attack = delegate { };
 
     public Vector2 MobileMoveInput;
 
@@ -68,8 +69,18 @@ public class InputReader : ScriptableObject, PlayerInputActions.IPlayerActions /
                 break;
         }
     }
-
-    public void OnFire(InputAction.CallbackContext context) { }
+    public void OnFire(InputAction.CallbackContext context)
+    {
+        switch (context.phase)
+        {
+            case InputActionPhase.Started:
+                Attack.Invoke();
+                break;
+            case InputActionPhase.Canceled:
+                Attack.Invoke();
+                break;
+        }
+    }
     public void OnRun(InputAction.CallbackContext context) { }
 
     bool IsDeviceMouse(InputAction.CallbackContext context)

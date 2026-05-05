@@ -247,11 +247,13 @@ public class PlayerController : ValidatedMonoBehaviour
     void OnEnable()
     {
         inputReader.Jump += HandleJump;
+        inputReader.Attack += DoAttack;
     }
 
     void OnDisable()
     {
         inputReader.Jump -= HandleJump;
+        inputReader.Attack -= DoAttack;
     }
 
     void HandleJump(bool pressed)
@@ -335,27 +337,29 @@ public class PlayerController : ValidatedMonoBehaviour
         if (deathPanel != null)
         {
             bool isMulti = GameModeManager.Instance != null &&
-                GameModeManager.CurrentMode ==
-                GameModeManager.GameMode.MultiPlayer;
+     GameModeManager.CurrentMode ==
+     GameModeManager.GameMode.MultiPlayer;
 
             var rect = deathPanel.GetComponent<RectTransform>();
+
             if (rect != null)
             {
                 if (isMulti)
                 {
-                    // P1 left half
+                    // multiplayer → left half
                     rect.anchorMin = new Vector2(0f, 0f);
                     rect.anchorMax = new Vector2(0.5f, 1f);
                 }
                 else
                 {
-                    // Singleplayer full screen
                     rect.anchorMin = new Vector2(0f, 0f);
                     rect.anchorMax = new Vector2(1f, 1f);
                 }
+
                 rect.offsetMin = Vector2.zero;
                 rect.offsetMax = Vector2.zero;
             }
+
             deathPanel.SetActive(true);
         }
     }
@@ -371,7 +375,7 @@ public class PlayerController : ValidatedMonoBehaviour
         if (deathPanel != null) deathPanel.SetActive(false);
         StopAllCoroutines();
 
-        
+
         var levelComplete = FindFirstObjectByType<LevelComplete>();
         if (levelComplete != null && levelComplete.IsCompleted)
             levelComplete.ForceReset();

@@ -63,6 +63,8 @@ public class SceneSetup : MonoBehaviour
                 p1Camera.rect = new Rect(0f, 0f, 1f, 1f);
             if (p2Camera != null)
                 p2Camera.gameObject.SetActive(false);
+            if (p2DeathPanel != null)
+                p2DeathPanel.SetActive(false);
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
