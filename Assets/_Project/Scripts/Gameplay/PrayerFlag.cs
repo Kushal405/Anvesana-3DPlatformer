@@ -25,26 +25,84 @@ public class PrayerFlag : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        if (collected) return;
+       Debug.Log("TRIGGER ENTERED by: " + other.name);
 
-        bool isP1 = other.CompareTag("Player");
-        bool isP2 = other.CompareTag("Player2");
-
-        if (!isP1 && !isP2) return;
-
-        // Check ownership
-        if (flagOwner == FlagOwner.Player1Only && !isP1) return;
-        if (flagOwner == FlagOwner.Player2Only && !isP2) return;
-
-        collected = true;
-        AudioManager.Instance?.PlayFlag();
-
-        if (isP1)
-            GameManager.Instance?.CollectFlagP1();
-        else
-            GameManager.Instance?.CollectFlagP2();
-
-        gameObject.SetActive(false);
-        Debug.Log($"Flag collected by {other.tag}");
+    if (collected)
+    {
+        Debug.Log("Already collected");
+        return;
     }
+
+    bool isP1 = other.CompareTag("Player");
+    bool isP2 = other.CompareTag("Player2");
+
+    Debug.Log("Player tag check:");
+    Debug.Log("isP1 = " + isP1);
+    Debug.Log("isP2 = " + isP2);
+    Debug.Log("Actual Tag = " + other.tag);
+
+    if (!isP1 && !isP2)
+    {
+        Debug.Log("Not a valid player");
+        return;
+    }
+
+    // Ownership check
+    Debug.Log("Flag Owner = " + flagOwner);
+
+    if (flagOwner == FlagOwner.Player1Only && !isP1)
+    {
+        Debug.Log("P2 tried collecting P1 flag");
+        return;
+    }
+
+    if (flagOwner == FlagOwner.Player2Only && !isP2)
+    {
+        Debug.Log("P1 tried collecting P2 flag");
+        return;
+    }
+
+    collected = true;
+
+    Debug.Log("COLLECTION SUCCESS");
+
+    AudioManager.Instance?.PlayFlag();
+
+    if (isP1)
+    {
+        Debug.Log("Calling CollectFlagP1()");
+        GameManager.Instance?.CollectFlagP1();
+    }
+    else
+    {
+        Debug.Log("Calling CollectFlagP2()");
+        GameManager.Instance?.CollectFlagP2();
+    }
+
+    gameObject.SetActive(false);
+
+    Debug.Log($"Flag collected by {other.tag}");
+} 
+    //     if (collected) return;
+
+    //     bool isP1 = other.CompareTag("Player");
+    //     bool isP2 = other.CompareTag("Player2");
+
+    //     if (!isP1 && !isP2) return;
+
+    //     // Check ownership
+    //     if (flagOwner == FlagOwner.Player1Only && !isP1) return;
+    //     if (flagOwner == FlagOwner.Player2Only && !isP2) return;
+
+    //     collected = true;
+    //     AudioManager.Instance?.PlayFlag();
+
+    //     if (isP1)
+    //         GameManager.Instance?.CollectFlagP1();
+    //     else
+    //         GameManager.Instance?.CollectFlagP2();
+
+    //     gameObject.SetActive(false);
+    //     Debug.Log($"Flag collected by {other.tag}");
+    // }
 }
